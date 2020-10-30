@@ -17,10 +17,10 @@
 #include <QGLWidget>
 #include <QMouseEvent>
 #include <QFileDialog>
-#include "Ball.h"
 #include "MousePick.h"
 #include "MasterWidget.h"
 #include "BVH.h"
+#include "camera.h"
 
 class RenderWidget : public QGLWidget
 	{ // class RenderWidget
@@ -33,18 +33,11 @@ class RenderWidget : public QGLWidget
 	// the actual BVH anim
 	BVH * bvh;
 
-	// arcball for storing light rotation
-	BallData lightBall;
-
-	// arcball for storing object rotation
-	BallData objectBall;
-
 	// for resolving clicks on the screen to 3D coordinates
 	MousePick *mousePicker;
 
 	// translation in window x,y
-	GLfloat translate_x, translate_y;
-	GLfloat last_x, last_y;
+	GLfloat lastX, lastY;
 
 	// which button was last pressed
 	int whichButton;
@@ -62,11 +55,20 @@ class RenderWidget : public QGLWidget
 	int cFrame;
 	bool paused;
 	float playbackSpeed;
-	
 
+	// Lights
+	const GLfloat lightMatrix[16] = {1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.};
+	const GLfloat light_position[4] = {0.0, 0.0, 1.0, 0.0};
 
+	// Camera
+	Camera camera;
+	bool movingCamera;
 
-	// constructor
+	// Mouse
+	float mouseLastX;
+	float mouseLastY;
+
+	// Action
 	RenderWidget(char *filename, MasterWidget *parent);
 
 	// destructor
@@ -84,6 +86,7 @@ class RenderWidget : public QGLWidget
 	virtual void mousePressEvent(QMouseEvent *event);
 	virtual void mouseMoveEvent(QMouseEvent *event);
 	virtual void mouseReleaseEvent(QMouseEvent *event);
+
 
 	// Resizing functions
 	QSize minimumSizeHint();

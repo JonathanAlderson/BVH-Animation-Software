@@ -50,20 +50,14 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = Ball.cpp \
-		BallAux.cpp \
-		BallMath.cpp \
-		Cartesian3.cpp \
+SOURCES       = Cartesian3.cpp \
 		RenderWidget.cpp \
 		MasterWidget.cpp \
 		MousePick.cpp \
 		BVH.cpp \
 		main.cpp moc_RenderWidget.cpp \
 		moc_MasterWidget.cpp
-OBJECTS       = Ball.o \
-		BallAux.o \
-		BallMath.o \
-		Cartesian3.o \
+OBJECTS       = Cartesian3.o \
 		RenderWidget.o \
 		MasterWidget.o \
 		MousePick.o \
@@ -144,18 +138,12 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		myBVH.pro Ball.h \
-		BallAux.h \
-		BallMath.h \
-		Cartesian3.h \
+		myBVH.pro Cartesian3.h \
 		RenderWidget.h \
 		MasterWidget.h \
 		MousePick.h \
 		BVH.h \
-		matrix.h Ball.cpp \
-		BallAux.cpp \
-		BallMath.cpp \
-		Cartesian3.cpp \
+		matrix.h Cartesian3.cpp \
 		RenderWidget.cpp \
 		MasterWidget.cpp \
 		MousePick.cpp \
@@ -344,8 +332,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents Ball.h BallAux.h BallMath.h Cartesian3.h RenderWidget.h MasterWidget.h MousePick.h BVH.h matrix.h $(DISTDIR)/
-	$(COPY_FILE) --parents Ball.cpp BallAux.cpp BallMath.cpp Cartesian3.cpp RenderWidget.cpp MasterWidget.cpp MousePick.cpp BVH.cpp main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents Cartesian3.h RenderWidget.h MasterWidget.h MousePick.h BVH.h matrix.h $(DISTDIR)/
+	$(COPY_FILE) --parents Cartesian3.cpp RenderWidget.cpp MasterWidget.cpp MousePick.cpp BVH.cpp main.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -380,9 +368,7 @@ moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 compiler_moc_header_make_all: moc_RenderWidget.cpp moc_MasterWidget.cpp
 compiler_moc_header_clean:
 	-$(DEL_FILE) moc_RenderWidget.cpp moc_MasterWidget.cpp
-moc_RenderWidget.cpp: Ball.h \
-		BallAux.h \
-		MousePick.h \
+moc_RenderWidget.cpp: MousePick.h \
 		Cartesian3.h \
 		../glm/glm.hpp \
 		../glm/detail/_fixes.hpp \
@@ -615,24 +601,10 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean
 
 ####### Compile
 
-Ball.o: Ball.cpp Ball.h \
-		BallAux.h \
-		BallMath.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Ball.o Ball.cpp
-
-BallAux.o: BallAux.cpp BallAux.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o BallAux.o BallAux.cpp
-
-BallMath.o: BallMath.cpp BallMath.h \
-		BallAux.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o BallMath.o BallMath.cpp
-
 Cartesian3.o: Cartesian3.cpp Cartesian3.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Cartesian3.o Cartesian3.cpp
 
 RenderWidget.o: RenderWidget.cpp RenderWidget.h \
-		Ball.h \
-		BallAux.h \
 		MousePick.h \
 		Cartesian3.h \
 		../glm/glm.hpp \
@@ -846,8 +818,6 @@ RenderWidget.o: RenderWidget.cpp RenderWidget.h \
 
 MasterWidget.o: MasterWidget.cpp MasterWidget.h \
 		RenderWidget.h \
-		Ball.h \
-		BallAux.h \
 		MousePick.h \
 		Cartesian3.h \
 		../glm/glm.hpp \
@@ -1272,8 +1242,6 @@ BVH.o: BVH.cpp BVH.h \
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o BVH.o BVH.cpp
 
 main.o: main.cpp RenderWidget.h \
-		Ball.h \
-		BallAux.h \
 		MousePick.h \
 		Cartesian3.h \
 		../glm/glm.hpp \

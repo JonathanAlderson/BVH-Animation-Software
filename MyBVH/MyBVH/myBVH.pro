@@ -20,20 +20,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-HEADERS += Ball.h \
-           BallAux.h \
-           BallMath.h \
-           Cartesian3.h \
+HEADERS += Cartesian3.h \
            RenderWidget.h \
            MasterWidget.h \
            MousePick.h \
            BVH.h \
            matrix.h
 
-SOURCES += Ball.cpp \
-           BallAux.cpp \
-           BallMath.cpp \
-           Cartesian3.cpp \
+SOURCES += Cartesian3.cpp \
            RenderWidget.cpp \
            MasterWidget.cpp \
            MousePick.cpp \

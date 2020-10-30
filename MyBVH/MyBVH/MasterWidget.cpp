@@ -95,8 +95,8 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     // Keyboard Shortcuts
     QShortcut *playShortcut = new QShortcut(QKeySequence("space"), this);
     QShortcut *stopShortcut = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
-    QShortcut *fastForwardShortcut = new QShortcut(QKeySequence("Shift+>"), this);
-    QShortcut *rewindShortcut = new QShortcut(QKeySequence("Shift+<"), this);
+    QShortcut *fastForwardShortcut = new QShortcut(QKeySequence("Shift+."), this);
+    QShortcut *rewindShortcut = new QShortcut(QKeySequence("Shift+,"), this);
     QObject::connect(playShortcut, SIGNAL(activated()), this, SLOT(playPause()));
     QObject::connect(stopShortcut, SIGNAL(activated()), this, SLOT(stop()));
     QObject::connect(fastForwardShortcut, SIGNAL(activated()), this, SLOT(fastForward()));
@@ -129,12 +129,52 @@ QSlider *MasterWidget::createSlider()
 // Escape to quit
 void MasterWidget::keyPressEvent(QKeyEvent* event)
 {
-    if(event->key() == Qt::Key_Escape)
-    {
-         QCoreApplication::quit();
-    }
-    else
-        QWidget::keyPressEvent(event);
+  switch(event->key())
+  {
+    // Quit Program
+    case Qt::Key_Escape:
+      QCoreApplication::quit();
+      break;
+    // Move Camera Forwards
+    case Qt::Key_W:
+      renderWidget->camera.ProcessKeyboard(FORWARD, 0.1);
+      renderWidget->updateGL();
+      break;
+    // Move Camera Left
+    case Qt::Key_A:
+      renderWidget->camera.ProcessKeyboard(LEFT, 0.1);
+      renderWidget->updateGL();
+      break;
+    // Move Camera Backwards
+    case Qt::Key_S:
+      renderWidget->camera.ProcessKeyboard(BACKWARD, 0.1);
+      renderWidget->updateGL();
+      break;
+    // Move Camera Right
+    case Qt::Key_D:
+      renderWidget->camera.ProcessKeyboard(RIGHT, 0.1);
+      renderWidget->updateGL();
+      break;
+    // Step Backwards A Single Frame
+    case Qt::Key_Q:
+      if(renderWidget->paused == true)
+      {
+        if(renderWidget->cFrame > 0){ renderWidget->cFrame -= 1; renderWidget->cTime -= renderWidget->bvh->interval * 1000; }
+        renderWidget->updateGL();
+      }
+      break;
+    // Step Forwards A Single Frame
+    case Qt::Key_E:
+      if(renderWidget->paused == true)
+      {
+        if(renderWidget->cFrame < renderWidget->bvh->numFrame ){ renderWidget->cFrame += 1; renderWidget->cTime += renderWidget->bvh->interval * 1000; }
+        renderWidget->updateGL();
+      }
+      break;
+  }
+
+  // Default
+  QWidget::keyPressEvent(event);
 }
 
 // Zooming in/out
@@ -153,7 +193,7 @@ void MasterWidget::wheelEvent(QWheelEvent* event)
   renderWidget->updateGL();
 }
 
-// playback settings
+// Halfes playback speed, if playing backwards will speed up
 void MasterWidget::rewind()
 {
   float ps = renderWidget->playbackSpeed;
@@ -166,28 +206,32 @@ void MasterWidget::rewind()
   if(ps < 0){ renderWidget->playbackSpeed *= 2.; }
 }
 
+// Doubles playback speed, if playing backwards will slow down
 void MasterWidget::fastForward()
 {
   float ps = renderWidget->playbackSpeed;
 
   // Start playing backwards
-  if(ps == -0.25){ renderWidget->playbackSpeed = 0.25;  renderWidget->cTime *= -1.;  return; }
+  if(ps == -0.25){ renderWidget->playbackSpeed = 0.25; return; }
 
   // make bigger if negative, make smaller if positive
-  if(ps > 0){ renderWidget->playbackSpeed *= 2.; renderWidget->cTime *= 2.; }
-  if(ps < 0){ renderWidget->playbackSpeed /= 2.; renderWidget->cTime /= 2.;  }
+  if(ps > 0){ renderWidget->playbackSpeed *= 2.; }
+  if(ps < 0){ renderWidget->playbackSpeed /= 2.; }
 }
 
+// Pauses The Current Animation
 void MasterWidget::pause()
 {
   renderWidget->paused = true;
 }
 
+// Plays The Current Animation
 void MasterWidget::play()
 {
   renderWidget->paused = false;
 }
 
+// Changes the boolean
 void MasterWidget::playPause()
 {
   bool p = renderWidget->paused;
@@ -196,7 +240,7 @@ void MasterWidget::playPause()
 
 }
 
-
+// Stops playback of the current animation
 void MasterWidget::stop()
 {
  renderWidget->paused = true;

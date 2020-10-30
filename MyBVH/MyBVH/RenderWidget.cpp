@@ -22,8 +22,6 @@
 
 #include "RenderWidget.h"
 
-static GLfloat light_position[] = {0.0, 0.0, 1.0, 0.0};
-
 // constructor
 RenderWidget::RenderWidget(char *filename, MasterWidget *parent)
 	: QGLWidget(parent)
@@ -45,7 +43,6 @@ RenderWidget::RenderWidget(char *filename, MasterWidget *parent)
 
 		// set default values
 		whichButton = -1;
-		translate_x = translate_y = 0.0;
 
 		// will change when scolling
 		size = bvh->boundingBoxSize;
@@ -62,9 +59,12 @@ RenderWidget::RenderWidget(char *filename, MasterWidget *parent)
 		// initialise the mouse clicker
 		mousePicker = new MousePick(&(bvh->globalPositions), 1.0);
 
-		// initialise arcballs to 80% of the widget's size
-		Ball_Init(&lightBall);		Ball_Place(&lightBall, qOne, 0.80);
-		Ball_Init(&objectBall);		Ball_Place(&objectBall, qOne, 0.80);
+		// Construct Camera with default values
+		camera = Camera();
+		movingCamera = false;
+
+		setMouseTracking(true);
+
 
 	} // constructor
 
@@ -104,12 +104,8 @@ void RenderWidget::resizeGL(int w, int h)
 	float aspectRatio = (float) w / (float) h;
 
 	// depending on aspect ratio, set to accomodate a sphere of radius = diagonal without clipping
-	// if (aspectRatio > 1.0)
-	// 	glOrtho(-aspectRatio * size, aspectRatio * size, -size, size, -size, size);
-	// else
-	// 	glOrtho(-size, size, -size/aspectRatio, size/aspectRatio, -size, size);
 	std::cout << "AR: " << aspectRatio << '\n';
-	gluPerspective(60., aspectRatio, 0.1, 1000.);
+	gluPerspective(camera.Zoom, aspectRatio, 0.1, 1000.);
 
 	} // RenderWidget::resizeGL()
 
@@ -128,14 +124,26 @@ void RenderWidget::paintGL()
 
 	// set light position first
 	// retrieve rotation from arcball & apply
-	GLfloat mNow[16];
-	Ball_Value(&lightBall, mNow);
-	glMultMatrixf(mNow);
+	glMultMatrixf(lightMatrix);
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
 	// apply translation for interface control
 	glLoadIdentity();
-	glTranslatef(translate_x, translate_y, 0.0);
+
+
+	// Apply Rotation From Camera
+	GLfloat view[16];
+	glm::mat4 viewIn = camera.GetViewMatrix();
+
+	for(int i = 0; i < 4; i++)
+	{
+		for(int j = 0; j < 4; j++)
+		{ // convert from Mat4 to float[16]
+			view[i * 4 + j] = viewIn[i][j];
+		}
+	}
+	glMultMatrixf(view);
+
 
 	// translate based on animation
 	Cartesian3 min = bvh->minCoords;
@@ -148,14 +156,7 @@ void RenderWidget::paintGL()
 	glTranslatef(-xTrans, -yTrans, zTrans - 25.);
 
 
-	// apply rotation matrix from arcball
-	Ball_Value(&objectBall, mNow);
-	glMultMatrixf(mNow);
-
-
-	//glTranslatef(0., 0., -(float)cFrame);
-
-	// test render
+	// Render Skeleton At Current Frame
 	bvh->RenderFigure(cFrame, zoom);
 
 	} // RenderWidget::paintGL()
@@ -169,126 +170,64 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	// find the minimum of height & width
 	float size = (width() > height()) ? height() : width();
 
-	// convert to the ArcBall's vector type
-	HVect vNow;
+	// TODO Mouse Move To Camera
+	float currX = event->x();    // (2.0 * event->x() - width()) / size
+	float currY = event->y();    // (height() - 2.0 * event->y() ) / size;
 
-	// scale both coordinates from that
-	vNow.x = (2.0 * event->x() - width()) / size;
-	vNow.y = (height() - 2.0 * event->y() ) / size;
+	// start moving the camera if we click
+	if(whichButton == 1)
+	{
+		movingCamera = true;
+	}
 
 	// Perform Mouse Picking
-	if(mousePicker->click(vNow.x, vNow.y) == -1) // if we arn't dragging a grid
+	if(mousePicker->click(currX, currY) != -1) // if are dragging a point
 	{
-		// now either translate or rotate object or light
-		switch(whichButton)
-		{ // button switch
-			case Qt::RightButton:
-			// save the last x, y
-			last_x = vNow.x; last_y = vNow.y;
-			// and update
-			updateGL();
-			break;
-			case Qt::MiddleButton:
-			// pass the point to the arcball code
-			Ball_Mouse(&lightBall, vNow);
-			// start dragging
-			Ball_BeginDrag(&lightBall);
-			// update the widget
-			updateGL();
-			break;
-			case Qt::LeftButton:
-			// pass the point to the arcball code
-			Ball_Mouse(&objectBall, vNow);
-			// start dragging
-			Ball_BeginDrag(&objectBall);
-			// update the widget
-			updateGL();
-			break;
-		} // button switch
+			// TODO
+			// Move Object
 	}
-	else
-	{
-	}
+
 
 	} // RenderWidget::mousePressEvent()
 
 void RenderWidget::mouseMoveEvent(QMouseEvent *event)
-	{ // RenderWidget::mouseMoveEvent()
+{ // RenderWidget::mouseMoveEvent()
 	// find the minimum of height & width
 	float size = (width() > height()) ? height() : width();
 
-	// convert to the ArcBall's vector type
-	HVect vNow;
+	// TODO Mouse Move To Camera
+	float currX = (2.0 * event->x() - width()) / size;
+	float currY = (height() - 2.0 * event->y() ) / size;
 
-	// scale both coordinates from that
-	vNow.x = (2.0 * event->x() - width()) / size;
-	vNow.y = (height() - 2.0 * event->y() ) / size;
+	// rotate the camera if clicking
+	if(movingCamera)
+	{
+		camera.ProcessMouseMovement((mouseLastX - currX) * 200., (mouseLastY - currY) * 200.);
+		paintGL();
+		updateGL();
+	}
+
+	// Move Correct Model Part
 
 	// now either translate or rotate object or light
-	if(mousePicker->dragging == false)
-	{
-		switch(whichButton)
-		{ // button switch
-			case Qt::RightButton:
-			// subtract the translation
-			translate_x += vNow.x - last_x;
-			translate_y += vNow.y - last_y;
-			last_x = vNow.x;
-			last_y = vNow.y;
-			// update the widget
-			updateGL();
-			break;
-			case Qt::MiddleButton:
-			// pass it to the arcball code
-			Ball_Mouse(&lightBall, vNow);
-			// start dragging
-			Ball_Update(&lightBall);
-			// update the widget
-			updateGL();
-			break;
-			case Qt::LeftButton:
-			// pass it to the arcball code
-			Ball_Mouse(&objectBall, vNow);
-			// start dragging
-			Ball_Update(&objectBall);
-			// update the widget
-			updateGL();
-			break;
-		} // button switch
-	}
-	// Adjust one of the grid points
-	else
+	if(mousePicker->dragging == true)
 	{
 		// TODO
 		paintGL();
 		updateGL();
 	}
-	} // RenderWidget::mouseMoveEvent()
+	// Update
+	mouseLastY = currY;
+	mouseLastX = currX;
+} // RenderWidget::mouseMoveEvent()
+
 
 void RenderWidget::mouseReleaseEvent(QMouseEvent *event)
 	{ // RenderWidget::mouseReleaseEvent()
 	// now either translate or rotate object or light
 	mousePicker->dragging = false; // stop from dragging
+	movingCamera = false; // camera will not move anymore
 
-	switch(whichButton)
-		{ // button switch
-		case Qt::RightButton:
-			// just update
-			updateGL();
-			break;
-		case Qt::MiddleButton:
-			// end the drag
-			Ball_EndDrag(&lightBall);
-			// update the widget
-			updateGL();
-			break;
-		case Qt::LeftButton:
-			// end the drag
-			Ball_EndDrag(&objectBall);
-			// update the widget
-			updateGL();
-			break;
-		} // button switch
 	} // RenderWidget::mouseReleaseEvent()
 
 	QSize RenderWidget::minimumSizeHint()
@@ -314,7 +253,6 @@ void RenderWidget::loadButtonPressed()
 	if(newFileName.toStdString().size() > 0)
 	{
 		// reset default values
-		translate_x = translate_y = 0.0;
 		zoom = 1.0;
 		cTime = 0.;
 		cFrame = 0;
@@ -325,8 +263,8 @@ void RenderWidget::loadButtonPressed()
 		// initialise the mouse clicker
 		mousePicker = new MousePick(&(bvh->globalPositions), 1.0);
 
-		// reset the ball
-		Ball_Init(&objectBall);		Ball_Place(&objectBall, qOne, 0.80);
+		// TODO
+		// reset the camera here
 
 		updateGL();
 		paintGL();
@@ -334,20 +272,22 @@ void RenderWidget::loadButtonPressed()
 	}
 }
 
+// Update the timer and calculate the current frame of animation
 void RenderWidget::timerUpdate()
 {
 	if(paused == false)
 	{
+		// MS Conversion
 		cTime += 16 * playbackSpeed;
+		int frame = (int)((cTime / (bvh->interval * 1000))) % (int)(bvh->numFrame);
 
-		int frame = (int)((cTime / (bvh->interval * 1000)) * playbackSpeed) % (int)(bvh->numFrame);
-
+		// Only Update If We need To
 		if(frame != cFrame)
 		{
 			cFrame = frame;
 			updateGL();
-			std::cout << frame << '\n';
-			//std::cout << "CTime: " << cTime << " cFrame: " << cFrame << '\n';
+			// set the frame text in the parent window
+			// and playback speed in the parent window
 		}
 	}
 }

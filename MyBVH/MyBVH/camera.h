@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <glad/glad.h>
+//#include <glad/glad.h>
 #include "glm.hpp"
 #include "gtc/matrix_transform.hpp"
 
@@ -43,35 +43,25 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
-    // Boost
-    float MaxBoost;
-    float MaxAcceleration;
-    float Acceleration;
 
 
     // constructor with vectors
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM), MaxBoost(BOOST), Acceleration(ACCEL)
+    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
         Position = position;
         WorldUp = up;
         Yaw = yaw;
         Pitch = pitch;
-        MaxBoost = MaxBoost;
-        MaxAcceleration = Acceleration;
-        Acceleration = 0;
 
         updateCameraVectors();
     }
     // constructor with scalar values
-    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM), MaxBoost(BOOST), Acceleration(ACCEL)
+    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
         Position = glm::vec3(posX, posY, posZ);
         WorldUp = glm::vec3(upX, upY, upZ);
         Yaw = yaw;
         Pitch = pitch;
-        MaxBoost = MaxBoost;
-        MaxAcceleration = Acceleration;
-        Acceleration = 0;
         updateCameraVectors();
     }
 
@@ -101,31 +91,8 @@ public:
             Position += Right * velocity;
     }
 
-    void ProcessBoost(float deltaTime)
-    {
-      Acceleration += deltaTime;
-
-      // Decelerate
-      if(deltaTime < 0){ Acceleration += deltaTime; }
-
-      // Limit Acceleration
-      if(Acceleration < 0.){ Acceleration = 0.; }
-      if(Acceleration > MaxAcceleration){ Acceleration = MaxAcceleration; }
-
-      // Decelerate Faster Than It accelerates
-
-
-
-      // Find boost for corresponding Accel
-      float parabola = (Acceleration - MaxAcceleration)/MaxAcceleration;
-      float boost  = (-(parabola*parabola)+1)*MaxBoost;
-
-      Position += Front * boost * (float)abs(deltaTime);
-
-    }
-
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
+    void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
     {
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
