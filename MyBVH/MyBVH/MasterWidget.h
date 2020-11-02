@@ -43,6 +43,7 @@ public:
     MasterWidget(char *filename, QWidget *parent);
 
     void keyPressEvent(QKeyEvent* event); // so we can escape to quit
+    void keyReleaseEvent(QKeyEvent* event); // so we can control our camera nicely
 
     void wheelEvent(QWheelEvent* event); // zooms in/out
 
@@ -55,6 +56,9 @@ private:
 
     QTimer *timer;
 
+    QLabel *currentFrameLabel;
+    QLabel *playbackSpeedLabel;
+
 // playback controls
 public slots:
 	void rewind();
@@ -63,6 +67,7 @@ public slots:
   void play();
   void stop();
   void playPause();
+  void updateText(int frameNo, float playbackSpeed);
 
 };
 

@@ -94,8 +94,8 @@ public:
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
     void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true)
     {
-        xoffset *= MouseSensitivity;
-        yoffset *= MouseSensitivity;
+        xoffset *= (MouseSensitivity * 0.02) * Zoom;
+        yoffset *= (MouseSensitivity * 0.02) * Zoom;
 
         Yaw   += xoffset;
         Pitch += yoffset;

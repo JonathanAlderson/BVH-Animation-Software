@@ -56,6 +56,16 @@ RenderWidget::RenderWidget(char *filename, MasterWidget *parent)
 		paused = true;
 		playbackSpeed = 1.0;
 
+		// default camera values
+		fwd = false;
+		lft = false;
+		rht = false;
+		bkw = false;
+
+		// timing info
+		thisTime = QDateTime::currentDateTimeUtc();
+		lastTime = QDateTime::currentDateTimeUtc();
+
 		// initialise the mouse clicker
 		mousePicker = new MousePick(&(bvh->globalPositions), 1.0);
 
@@ -84,6 +94,9 @@ void RenderWidget::initializeGL()
 	glShadeModel(GL_FLAT);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHTING);
+	glEnable(GL_COLOR_MATERIAL);
+
+	glColor3f(1., 1., 1.);
 
 	// background is a nice blue
 	glClearColor(189. / 255., 215. / 255., 217. / 255., 1.0);
@@ -92,6 +105,11 @@ void RenderWidget::initializeGL()
 // called every time the widget is resized
 void RenderWidget::resizeGL(int w, int h)
 	{ // RenderWidget::resizeGL()
+
+	// save the size of the screen
+	screenW = w;
+	screenH = h;
+
 	// reset the viewport
 	glViewport(0, 0, w, h);
 
@@ -105,9 +123,20 @@ void RenderWidget::resizeGL(int w, int h)
 
 	// depending on aspect ratio, set to accomodate a sphere of radius = diagonal without clipping
 	std::cout << "AR: " << aspectRatio << '\n';
+	std::cout << "Zoom: " << camera.Zoom << '\n';
 	gluPerspective(camera.Zoom, aspectRatio, 0.1, 1000.);
 
 	} // RenderWidget::resizeGL()
+
+void RenderWidget::updatePerspective()
+{ // updatePerspective()
+	float aspectRatio = (float) screenW / (float) screenH;
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(camera.Zoom, aspectRatio, 0.1, 1000.);
+
+	std::cout << camera.Zoom << '\n';
+} // updatePerspective()
 
 // called every time the widget needs painting
 void RenderWidget::paintGL()
@@ -131,6 +160,8 @@ void RenderWidget::paintGL()
 	glLoadIdentity();
 
 
+
+
 	// Apply Rotation From Camera
 	GLfloat view[16];
 	glm::mat4 viewIn = camera.GetViewMatrix();
@@ -144,7 +175,6 @@ void RenderWidget::paintGL()
 	}
 	glMultMatrixf(view);
 
-
 	// translate based on animation
 	Cartesian3 min = bvh->minCoords;
 	Cartesian3 max = bvh->maxCoords;
@@ -155,9 +185,16 @@ void RenderWidget::paintGL()
 	//std::cout << xTrans << " " << yTrans << " " << zTrans << '\n';
 	glTranslatef(-xTrans, -yTrans, zTrans - 25.);
 
-
 	// Render Skeleton At Current Frame
-	bvh->RenderFigure(cFrame, zoom);
+	bvh->RenderFigure(cFrame, 1.0, &camera);
+
+	glTranslatef(xTrans, yTrans, -(zTrans - 25.));
+
+	// render the control points
+	bvh->RenderControlPoints();
+
+
+
 
 	} // RenderWidget::paintGL()
 
@@ -171,8 +208,8 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	float size = (width() > height()) ? height() : width();
 
 	// TODO Mouse Move To Camera
-	float currX = event->x();    // (2.0 * event->x() - width()) / size
-	float currY = event->y();    // (height() - 2.0 * event->y() ) / size;
+	float currX = (2.0 * event->x() - width()) / size;
+	float currY = (height() - 2.0 * event->y() ) / size;
 
 	// start moving the camera if we click
 	if(whichButton == 1)
@@ -181,10 +218,14 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	}
 
 	// Perform Mouse Picking
-	if(mousePicker->click(currX, currY) != -1) // if are dragging a point
+	int clicked = mousePicker->click(currX, currY, &camera);
+	bvh->activeJoint = clicked;
+
+	if(clicked != -1) // if are dragging a point
 	{
 			// TODO
 			// Move Object
+
 	}
 
 
@@ -275,19 +316,48 @@ void RenderWidget::loadButtonPressed()
 // Update the timer and calculate the current frame of animation
 void RenderWidget::timerUpdate()
 {
+	// Control Camera Movement
+	thisTime = QDateTime::currentDateTimeUtc();
+
+
+	qint64 delta = lastTime.msecsTo(thisTime);
+
+
+	bool updateNeeded = false;
+
+	if(fwd){ camera.ProcessKeyboard(FORWARD, delta / 300.); }
+	if(lft){ camera.ProcessKeyboard(LEFT, delta / 300.); }
+	if(rht){ camera.ProcessKeyboard(RIGHT, delta / 300.); }
+	if(bkw){ camera.ProcessKeyboard(BACKWARD, delta / 300.); }
+
+	if(fwd || lft || rht || bkw)
+	{
+		updateNeeded = true;
+	}
+
+	// Control Playback
 	if(paused == false)
 	{
 		// MS Conversion
-		cTime += 16 * playbackSpeed;
+		cTime += delta * playbackSpeed;
 		int frame = (int)((cTime / (bvh->interval * 1000))) % (int)(bvh->numFrame);
 
 		// Only Update If We need To
 		if(frame != cFrame)
 		{
 			cFrame = frame;
-			updateGL();
-			// set the frame text in the parent window
-			// and playback speed in the parent window
+			updateNeeded = true;
+
+			parentWidget->updateText(cFrame, playbackSpeed);
 		}
+	}
+
+	// Update Timer
+	lastTime = thisTime;
+
+	// update the frame if needed
+	if(updateNeeded)
+	{
+		updateGL();
 	}
 }

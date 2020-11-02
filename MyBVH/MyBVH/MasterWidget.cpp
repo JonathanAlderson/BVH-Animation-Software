@@ -35,9 +35,9 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     // playback
     QGroupBox *playbackGroup = new QGroupBox(tr("Playback"));
     QVBoxLayout *playbackGroupLayout = new QVBoxLayout;
-    QLabel *playbackSpeedLabel = new QLabel(this);
+    playbackSpeedLabel = new QLabel(this);
     playbackSpeedLabel->setText("Playback Speed: 1x");
-    QLabel *currentFrameLabel = new QLabel(this);
+    currentFrameLabel = new QLabel(this);
     currentFrameLabel->setText("Current Frame: 1");
 
     playbackGroupLayout->addWidget(playbackSpeedLabel);
@@ -126,7 +126,7 @@ QSlider *MasterWidget::createSlider()
     return slider;
 }
 
-// Escape to quit
+// Escape to quit and camera start moving
 void MasterWidget::keyPressEvent(QKeyEvent* event)
 {
   switch(event->key())
@@ -137,23 +137,19 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
       break;
     // Move Camera Forwards
     case Qt::Key_W:
-      renderWidget->camera.ProcessKeyboard(FORWARD, 0.1);
-      renderWidget->updateGL();
+      renderWidget->fwd = true;
       break;
     // Move Camera Left
     case Qt::Key_A:
-      renderWidget->camera.ProcessKeyboard(LEFT, 0.1);
-      renderWidget->updateGL();
+      renderWidget->lft = true;
       break;
     // Move Camera Backwards
     case Qt::Key_S:
-      renderWidget->camera.ProcessKeyboard(BACKWARD, 0.1);
-      renderWidget->updateGL();
+      renderWidget->bkw = true;
       break;
     // Move Camera Right
     case Qt::Key_D:
-      renderWidget->camera.ProcessKeyboard(RIGHT, 0.1);
-      renderWidget->updateGL();
+      renderWidget->rht = true;
       break;
     // Step Backwards A Single Frame
     case Qt::Key_Q:
@@ -177,6 +173,37 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
   QWidget::keyPressEvent(event);
 }
 
+// for stopping camera movement
+void MasterWidget::keyReleaseEvent(QKeyEvent* event)
+{
+  switch(event->key())
+  {
+    // Quit Program
+    case Qt::Key_Escape:
+      QCoreApplication::quit();
+      break;
+    // Move Camera Forwards
+    case Qt::Key_W:
+      renderWidget->fwd = false;
+      break;
+    // Move Camera Left
+    case Qt::Key_A:
+      renderWidget->lft = false;
+      break;
+    // Move Camera Backwards
+    case Qt::Key_S:
+      renderWidget->bkw = false;
+      break;
+    // Move Camera Right
+    case Qt::Key_D:
+      renderWidget->rht = false;
+      break;
+  }
+
+  // Default
+  QWidget::keyReleaseEvent(event);
+}
+
 // Zooming in/out
 void MasterWidget::wheelEvent(QWheelEvent* event)
 {
@@ -184,13 +211,15 @@ void MasterWidget::wheelEvent(QWheelEvent* event)
 
   if(numDegrees.y() > 0)
   {
-    if(renderWidget->zoom < 2.){ renderWidget->zoom += 0.02;}
+    if(renderWidget->zoom < 2.){ renderWidget->camera.ProcessMouseScroll(1);}
   }
   else
   {
-    if(renderWidget->zoom > 0.1){ renderWidget->zoom -= 0.02; }
+    if(renderWidget->zoom > 0.1){ renderWidget->camera.ProcessMouseScroll(-1); }
   }
+  renderWidget->updatePerspective();
   renderWidget->updateGL();
+
 }
 
 // Halfes playback speed, if playing backwards will speed up
@@ -248,4 +277,11 @@ void MasterWidget::stop()
  renderWidget->cTime = 0;
  renderWidget->playbackSpeed = 1.;
  renderWidget->updateGL();
+}
+
+// updates the UI to show the playback
+void MasterWidget::updateText(int frameNo, float playbackSpeed)
+{
+  currentFrameLabel->setText(QString::fromStdString("Current Frame: " + std::to_string(frameNo)));
+  playbackSpeedLabel->setText(QString::fromStdString("Playback Speed: " + std::to_string(playbackSpeed)));
 }

@@ -42,6 +42,7 @@ BVH::BVH()
 {
 	motion = NULL;
 	Clear();
+  activeJoint = -1;
 }
 
 // Standard Constructor With File Name
@@ -50,6 +51,7 @@ BVH::BVH( const char * bvhFileName )
 	motion = NULL;
 	Clear();
 	Load( bvhFileName );
+  activeJoint = -1;
 }
 
 // Called before we call a new model
@@ -191,10 +193,11 @@ void  BVH::Load( const char * bvhFileName )
 			while ( *token == ' ' )  token ++;
 			newJoint->name = token;
 
-      globalPositions.push_back(Cartesian3(0., 0., 0.));
-
 			// set Joint name to thisJoint name
 			jointIndex[ newJoint->name ] = newJoint;
+
+      // set a default global position
+      globalPositions.push_back(Cartesian3(0., 0., 0.));
 
 			continue;
 		}
@@ -353,10 +356,6 @@ void BVH::FindMinMax()
     thisY = address[1];
     thisZ = address[2];
 
-    // std::cout << thisX << '\n';
-    // std::cout << thisY << '\n';
-    // std::cout << thisZ << '\n';
-
     if(thisX > maxX) maxX = thisX;
     if(thisX < minX) minX = thisX;
     if(thisY > maxY) maxY = thisY;
@@ -372,6 +371,46 @@ void BVH::FindMinMax()
 
 }
 
+void BVH::FindGlobalPosition(Joint *joint, Camera *camera)
+{
+  // find the global position
+
+  // find the global position and update it
+  GLfloat matrix[16];
+  glGetFloatv (GL_MODELVIEW_MATRIX, matrix);
+
+  glm::mat4 modelMatrix = glm::make_mat4(matrix);
+
+
+
+  // undo the camera
+  modelMatrix = glm::inverse(camera->GetViewMatrix()) * modelMatrix;
+
+
+
+  // get the parents matrix
+  glm::mat4 parentMatrix = glm::mat4(1.); // identity
+  if(joint->parent != NULL)
+  {
+    parentMatrix = joint->parent->localMatrix;
+
+      }
+
+    // store this as the joints local matrix
+    joint->localMatrix = parentMatrix * modelMatrix;
+
+
+    glm::vec4 pos = glm::vec4(joint->offset[0], joint->offset[0], joint->offset[0], 1.);
+
+    glm::vec4 emp = glm::vec4(0., 0., 0., 1.);
+
+    glm::vec4 global = modelMatrix * emp;
+
+
+    globalPositions[joint->index] = Cartesian3(global[0], global[1], global[2]);
+
+}
+
 ////////////////////////////////////////////////
 // RENDERING FUNCTIONS
 ////////////////////////////////////////////////
@@ -379,18 +418,19 @@ void BVH::FindMinMax()
 
 // The initial call to render figure, from this point on
 // will go to the recursive method
-void  BVH::RenderFigure( int frameNo, float scale )
+void  BVH::RenderFigure( int frameNo, float scale, Camera *camera)
 {
 	// Calculate poistion into array to start based on frame
-	RenderFigure( joints[ 0 ], motion + frameNo * numChannel, scale );
+	RenderFigure( joints[ 0 ], motion + frameNo * numChannel, scale, camera );
 }
 
 
 // Going to be using a lot of
 // https://www.youtube.com/watch?v=vCadcBR95oU
-void  BVH::RenderFigure( const Joint * joint, const double * data, float scale )
+void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camera)
 {
 	glPushMatrix();
+
 
 	// If this is the root notde
 	if ( joint->parent == NULL )
@@ -416,16 +456,19 @@ void  BVH::RenderFigure( const Joint * joint, const double * data, float scale )
 			glRotatef( data[ channel->index ], 0.0f, 0.0f, 1.0f );
 	}
 
+  // Now we have the local matrix for each position
+  FindGlobalPosition(joint, camera);
+
   // we are at the end, so use SITE data
 	if ( joint->children.size() == 0 )
 	{
-		RenderBone( 0.0f, 0.0f, 0.0f, joint->site[ 0 ] * scale, joint->site[ 1 ] * scale, joint->site[ 2 ] * scale );
+		RenderBone(0.0f, 0.0f, 0.0f, joint->site[ 0 ] * scale, joint->site[ 1 ] * scale, joint->site[ 2 ] * scale );
 	}
 	// We are going to a child, so draw to there
 	if ( joint->children.size() == 1 )
 	{
 		Joint *  child = joint->children[ 0 ];
-		RenderBone( 0.0f, 0.0f, 0.0f, child->offset[ 0 ] * scale, child->offset[ 1 ] * scale, child->offset[ 2 ] * scale );
+		RenderBone(0.0f, 0.0f, 0.0f, child->offset[ 0 ] * scale, child->offset[ 1 ] * scale, child->offset[ 2 ] * scale );
 	}
 	// else, draw to midpoint
 	if ( joint->children.size() > 1 )
@@ -444,13 +487,13 @@ void  BVH::RenderFigure( const Joint * joint, const double * data, float scale )
 		center[ 2 ] /= joint->children.size() + 1;
 
 		// Put this bone at the center of your kids
-		RenderBone(	0.0f, 0.0f, 0.0f, center[ 0 ] * scale, center[ 1 ] * scale, center[ 2 ] * scale );
+		RenderBone(0.0f, 0.0f, 0.0f, center[ 0 ] * scale, center[ 1 ] * scale, center[ 2 ] * scale );
 
 		// Render the Bones of all your children
 		for ( i = 0; i < joint->children.size(); i++ )
 		{
 			Joint *  child = joint->children[ i ];
-			RenderBone(	center[ 0 ] * scale, center[ 1 ] * scale, center[ 2 ] * scale,
+			RenderBone(center[ 0 ] * scale, center[ 1 ] * scale, center[ 2 ] * scale,
 				child->offset[ 0 ] * scale, child->offset[ 1 ] * scale, child->offset[ 2 ] * scale );
 		}
 	}
@@ -458,7 +501,7 @@ void  BVH::RenderFigure( const Joint * joint, const double * data, float scale )
 	// Call this function recursively on children
 	for ( i = 0; i < joint->children.size(); i++ )
 	{
-		RenderFigure( joint->children[ i ], data, scale );
+		RenderFigure( joint->children[ i ], data, scale, camera);
 	}
 
 	glPopMatrix();
@@ -466,8 +509,9 @@ void  BVH::RenderFigure( const Joint * joint, const double * data, float scale )
 
 
 // Renders a single bone (Happends a lot)
-void  BVH::RenderBone( float x0, float y0, float z0, float x1, float y1, float z1, float bRadius )
+void  BVH::RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius )
 {
+
 	// Calculate a from -> to vector
 	GLdouble  dir_x = x1 - x0;
 	GLdouble  dir_y = y1 - y0;
@@ -485,7 +529,6 @@ void  BVH::RenderBone( float x0, float y0, float z0, float x1, float y1, float z
 
 	// translate to start
 	glTranslated( x0, y0, z0 );
-
 
 	// if bone is too short, do this to avoid
   // wierd rendering errors
@@ -537,4 +580,34 @@ void  BVH::RenderBone( float x0, float y0, float z0, float x1, float y1, float z
 	gluCylinder( quad_obj, radius, radius, bone_length, slices, stack );
 
 	glPopMatrix();
+}
+
+// Renders the points where a user can click
+void BVH::RenderControlPoints()
+{
+  GLUquadric *quad;
+  quad = gluNewQuadric();
+  Cartesian3 thisPos;
+
+  // save current state and load identity
+  glPushMatrix();
+  //glLoadIdentity();
+  for(int i = 0; i < globalPositions.size(); i++)
+  {
+    // change the colour to blue if being clicked on
+    if(activeJoint == i) { glColor3f(1., 0., 0.); }
+    else { glColor3f(0. , 0. , .6); }
+
+
+    thisPos = globalPositions[i];
+    glPushMatrix();
+    glTranslatef(thisPos.x, thisPos.y, thisPos.z);
+    gluSphere(quad, .5, 5, 5);
+    glPopMatrix();
+  }
+  // get back to normal
+  glPopMatrix();
+
+  // set the colour to white
+  glColor3f(1., 1., 1.);
 }

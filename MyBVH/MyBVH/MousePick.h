@@ -15,6 +15,7 @@
 #define MOUSEPICK_H
 
 #include "Cartesian3.h"
+#include "camera.h"
 #include "glm.hpp"
 #include "gtc/type_ptr.hpp"
 #include "gtx/intersect.hpp"
@@ -26,7 +27,7 @@ public:
 
   MousePick(std::vector<Cartesian3> *targetPoints, float size);
 
-  int click(float x, float y);
+  int click(float x, float y, Camera *camera);
 
   glm::vec2 drag(float x, float y);
 

@@ -16,6 +16,7 @@
 
 #include <QGLWidget>
 #include <QMouseEvent>
+#include <QDateTime>
 #include <QFileDialog>
 #include "MousePick.h"
 #include "MasterWidget.h"
@@ -56,6 +57,20 @@ class RenderWidget : public QGLWidget
 	bool paused;
 	float playbackSpeed;
 
+	// camera options
+	bool fwd;
+	bool lft;
+	bool rht;
+	bool bkw;
+
+	// time options
+	QDateTime thisTime;
+	QDateTime lastTime;
+
+	// screen
+	float screenW;
+	float screenH;
+
 	// Lights
 	const GLfloat lightMatrix[16] = {1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.};
 	const GLfloat light_position[4] = {0.0, 0.0, 1.0, 0.0};
@@ -73,6 +88,9 @@ class RenderWidget : public QGLWidget
 
 	// destructor
 	~RenderWidget();
+
+	// allowing the camera to zoom in
+	void updatePerspective();
 
 	protected:
 	// called when OpenGL context is set up

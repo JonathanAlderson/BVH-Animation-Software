@@ -19,7 +19,11 @@ using namespace std;
 #include <vector>
 #include <map>
 #include <string>
+#include <iomanip>
 #include "Cartesian3.h"
+#include "camera.h"
+#include "glm.hpp"
+#include "gtc/type_ptr.hpp"
 
 class BVH
 {
@@ -39,6 +43,7 @@ public:
 
     // Used at setup to find a bounding box
     void FindMinMax();
+
 
 // enum and struct declarations
 public:
@@ -84,6 +89,9 @@ public:
     double site[3];
     // how many channels of information this Joint has (for reading)
     vector< Channel * > channels;
+    // used for calculating the global position
+    glm::mat4 localMatrix;
+
   };
 
 public:
@@ -103,13 +111,17 @@ public:
   vector < Joint * > joints;
   map< string, Joint *> jointIndex;
 
-  vector<Cartesian3> globalPositions;
-
   // Over the whole animation,
   // how the ROOT node moves
   Cartesian3 minCoords;
   Cartesian3 maxCoords;
   float boundingBoxSize;
+
+  // for mouse interaction
+  vector<Cartesian3> globalPositions;
+
+  // which item the user is controlling
+  int activeJoint;
 
   // for playback
   int numFrame;
@@ -117,17 +129,23 @@ public:
   double * motion;
 
 public:
+
+  // calculates the new global positions at every frame
+  void FindGlobalPosition(Joint *joint, Camera *camera);
+
   // Rendering Functions
 
   // Initial Call For Rendering a Figure
-  void RenderFigure(int frameNo, float scale = 1.0f);
+  void RenderFigure(int frameNo, float scale, Camera *camera);
 
   // Render Figure Function Made to be called Recursively
-	static void  RenderFigure( const Joint * root, const double * data, float scale = 1.0f );
-
+	void  RenderFigure(Joint * root, double * data, float scale, Camera *camera);
 
   // Expect a lot of calls to this one
-  static void RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius = 0.1 );
+  void RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius = 0.1 );
+
+  // Renders the points where a user can click
+  void RenderControlPoints();
 
 };
 
