@@ -23,6 +23,9 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     // Timer for running animation
     timer = new QTimer(this);
 
+    // default value
+    shiftHeld = false;
+
     // GUI Layout
 
     // Save/Load
@@ -39,9 +42,12 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     playbackSpeedLabel->setText("Playback Speed: 1x");
     currentFrameLabel = new QLabel(this);
     currentFrameLabel->setText("Current Frame: 1");
+    axisConstraintLabel = new QLabel(this);
+    axisConstraintLabel->setText("X: True\nY: True\nZ: True");
 
     playbackGroupLayout->addWidget(playbackSpeedLabel);
     playbackGroupLayout->addWidget(currentFrameLabel);
+    playbackGroupLayout->addWidget(axisConstraintLabel);
     playbackGroup->setLayout(playbackGroupLayout);
 
 
@@ -135,9 +141,15 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
     case Qt::Key_Escape:
       QCoreApplication::quit();
       break;
+
+    ////////////////////////////////////////////
+    //  CAMERA MOVEMENT
+    ///////////////////////////////////////////
+
     // Move Camera Forwards
     case Qt::Key_W:
-      renderWidget->fwd = true;
+      if(shiftHeld){ renderWidget->upp = true; }
+      else         { renderWidget->fwd = true; }
       break;
     // Move Camera Left
     case Qt::Key_A:
@@ -145,12 +157,16 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
       break;
     // Move Camera Backwards
     case Qt::Key_S:
-      renderWidget->bkw = true;
+      if(shiftHeld){ renderWidget->dwn = true; }
+      else         { renderWidget->bkw = true; }
       break;
     // Move Camera Right
     case Qt::Key_D:
       renderWidget->rht = true;
       break;
+    ////////////////////////////////////////////
+    //  PLAYBACK CONTROLS
+    ///////////////////////////////////////////
     // Step Backwards A Single Frame
     case Qt::Key_Q:
       if(renderWidget->paused == true)
@@ -167,6 +183,25 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
         renderWidget->updateGL();
       }
       break;
+      ////////////////////////////////////////////
+      //  AXIS CONSTRAINTS
+      ///////////////////////////////////////////
+      case Qt::Key_X:
+        if(shiftHeld){ renderWidget->xAxis = false; renderWidget->yAxis = true; renderWidget->zAxis = true; }
+        else         { renderWidget->xAxis = true; renderWidget->yAxis = false; renderWidget->zAxis = false;   }
+        break;
+      case Qt::Key_Y:
+        if(shiftHeld){ renderWidget->xAxis = true; renderWidget->yAxis = false; renderWidget->zAxis = true; }
+        else         { renderWidget->xAxis = false; renderWidget->yAxis = true; renderWidget->zAxis = false; }
+        break;
+      case Qt::Key_Z:
+        if(shiftHeld){ renderWidget->xAxis = true; renderWidget->yAxis = true; renderWidget->zAxis = false; }
+        else         { renderWidget->xAxis = false; renderWidget->yAxis = false; renderWidget->zAxis = true; }
+        break;
+      case Qt::Key_Shift:
+        std::cout << "SHIFT" << '\n';
+        shiftHeld = true;
+        break;
   }
 
   // Default
@@ -178,12 +213,16 @@ void MasterWidget::keyReleaseEvent(QKeyEvent* event)
 {
   switch(event->key())
   {
+    ////////////////////////////////////////////
+    //  CAMERA MOVEMENT
+    ///////////////////////////////////////////
     // Quit Program
     case Qt::Key_Escape:
       QCoreApplication::quit();
       break;
     // Move Camera Forwards
     case Qt::Key_W:
+      renderWidget->upp = false;
       renderWidget->fwd = false;
       break;
     // Move Camera Left
@@ -192,11 +231,18 @@ void MasterWidget::keyReleaseEvent(QKeyEvent* event)
       break;
     // Move Camera Backwards
     case Qt::Key_S:
+      renderWidget->dwn = false;
       renderWidget->bkw = false;
       break;
     // Move Camera Right
     case Qt::Key_D:
       renderWidget->rht = false;
+      break;
+
+    // bool for rotation and movement locking
+    case Qt::Key_Shift:
+      std::cout << "NOT SHIFT" << '\n';
+      shiftHeld = false;
       break;
   }
 
@@ -282,6 +328,18 @@ void MasterWidget::stop()
 // updates the UI to show the playback
 void MasterWidget::updateText(int frameNo, float playbackSpeed)
 {
+  string axis = "X: ";
+  if(renderWidget->xAxis){ axis += "True\nY: " ;}
+  else                   { axis += "False\nY: ";}
+  if(renderWidget->yAxis){ axis += "True\nZ: " ;}
+  else                   { axis += "False\nZ: ";}
+  if(renderWidget->zAxis){ axis += "True"      ;}
+  else                   { axis += "False "    ;}
+
+  // can't convert to 2dp
+  string playback = "Playback Speed: " + std::to_string((float)((int)(playbackSpeed * 100.)) / 100.) + "x";
+
   currentFrameLabel->setText(QString::fromStdString("Current Frame: " + std::to_string(frameNo)));
-  playbackSpeedLabel->setText(QString::fromStdString("Playback Speed: " + std::to_string(playbackSpeed)));
+  playbackSpeedLabel->setText(QString::fromStdString(playback));
+  axisConstraintLabel->setText(QString::fromStdString(axis));
 }

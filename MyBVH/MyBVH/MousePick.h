@@ -25,18 +25,18 @@ class MousePick
 {
 public:
 
-  MousePick(std::vector<Cartesian3> *targetPoints, float size);
+  MousePick(std::vector<double> *targetPoints, float size);
 
   int click(float x, float y, Camera *camera);
 
-  glm::vec2 drag(float x, float y);
+  glm::vec3 drag(float x, float y, Camera *camera);
 
   bool dragging;
   int closest;
-  glm::vec2 start;
+  glm::vec3 start;
   float size;
 
-  std::vector<Cartesian3> *targetPoints;
+  std::vector<double> *targetPoints;
 
 };
 

@@ -58,6 +58,9 @@ private:
 
     QLabel *currentFrameLabel;
     QLabel *playbackSpeedLabel;
+    QLabel *axisConstraintLabel;
+
+    bool shiftHeld;
 
 // playback controls
 public slots:

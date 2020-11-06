@@ -55,6 +55,12 @@ public:
     X_POSITION, Y_POSITION, Z_POSITION
   };
 
+  // For Using Either IK Or Rotations
+  enum MoveEnum {
+      ROTATE,
+      INVERSEKINEMATICS
+  };
+
   // Forward Declaration of Joint
   struct Joint;
 
@@ -91,6 +97,8 @@ public:
     vector< Channel * > channels;
     // used for calculating the global position
     glm::mat4 localMatrix;
+    // where the data starts for position editing
+    double *dataStart;
 
   };
 
@@ -118,7 +126,11 @@ public:
   float boundingBoxSize;
 
   // for mouse interaction
-  vector<Cartesian3> globalPositions;
+  vector<double> globalPositions;
+
+  // for inverse kinematics
+  vector<double> jointAngles;
+
 
   // which item the user is controlling
   int activeJoint;
@@ -146,6 +158,9 @@ public:
 
   // Renders the points where a user can click
   void RenderControlPoints();
+
+  // moves a specific joint with inverse kinematics
+  void MoveJoint(int id, glm::vec3 move, int mode);
 
 };
 

@@ -197,7 +197,14 @@ void  BVH::Load( const char * bvhFileName )
 			jointIndex[ newJoint->name ] = newJoint;
 
       // set a default global position
-      globalPositions.push_back(Cartesian3(0., 0., 0.));
+      globalPositions.push_back(0.);
+      globalPositions.push_back(0.);
+      globalPositions.push_back(0.);
+
+      // set a default rotation
+      jointAngles.push_back(0.);
+      jointAngles.push_back(0.);
+      jointAngles.push_back(0.);
 
 			continue;
 		}
@@ -388,16 +395,13 @@ void BVH::FindGlobalPosition(Joint *joint, Camera *camera)
 
 
 
-  // get the parents matrix
-  glm::mat4 parentMatrix = glm::mat4(1.); // identity
-  if(joint->parent != NULL)
-  {
-    parentMatrix = joint->parent->localMatrix;
+  // calculate the local matrix of this Joint
+  glm::mat4 parentMM = glm::mat4(1.); // identity
+  Joint * prntPtr = joint->parent;
+  // nice recursive one line loop!
+  while(prntPtr != NULL){ parentMM = parentMM * prntPtr->localMatrix; prntPtr = prntPtr->parent; }
 
-      }
-
-    // store this as the joints local matrix
-    joint->localMatrix = parentMatrix * modelMatrix;
+  joint->localMatrix = modelMatrix * glm::inverse(parentMM);
 
 
     glm::vec4 pos = glm::vec4(joint->offset[0], joint->offset[0], joint->offset[0], 1.);
@@ -407,8 +411,169 @@ void BVH::FindGlobalPosition(Joint *joint, Camera *camera)
     glm::vec4 global = modelMatrix * emp;
 
 
-    globalPositions[joint->index] = Cartesian3(global[0], global[1], global[2]);
+    // set the global position from what we have just calculated
+    globalPositions[3 * joint->index]     = global[0];
+    globalPositions[3 * joint->index + 1] = global[1];
+    globalPositions[3 * joint->index + 2] = global[2];
 
+}
+
+////////////////////////////////////////////////
+// INVERSE KINEMATIC FUNCTIONS
+////////////////////////////////////////////////
+
+// void BVH::LerpPoint()
+// {
+//   // Lerp from positions ver t
+// }
+
+
+
+void BVH::MoveJoint(int id, glm::vec3 move, int mode)
+{
+
+  // find current joints position and rotation
+  Joint *j = joints[id];
+  vector<Channel *> chn = j->channels;
+
+  double rot[3] = {0., 0., 0.};
+  double pos[3] = {0., 0., 0.};
+
+  // read position
+  pos[0] = globalPositions[3 * j->index];
+  pos[1] = globalPositions[3 * j->index + 1];
+  pos[2] = globalPositions[3 * j->index + 2];
+
+  // read rotation
+  for(int i = 0; i < chn.size(); i++)
+  {
+    if(chn[i]->type == 0){ rot[0] = j->dataStart[chn[i]->index]; }
+    if(chn[i]->type == 1){ rot[1] = j->dataStart[chn[i]->index]; }
+    if(chn[i]->type == 2){ rot[2] = j->dataStart[chn[i]->index]; }
+  }
+
+  // Do a Simple Rotation On The Object
+  if(mode == ROTATE)
+  {
+
+
+    for(int i = 0; i < chn.size(); i++)
+    {
+      if(chn[i]->type == 0){ j->dataStart[chn[i]->index] += move.x; } // X ROTATION
+      if(chn[i]->type == 1){ j->dataStart[chn[i]->index] += move.y; } // Y ROTATION
+      if(chn[i]->type == 2){ j->dataStart[chn[i]->index] += move.z; } // Z ROTATION
+    }
+  }
+
+  // Do IK
+  if(mode == INVERSEKINEMATICS)
+  {
+    std::cout << "" << '\n';
+    std::cout << "" << '\n';
+    std::cout << "INVERSEKINEMATICS" << '\n';
+
+    // start and end points
+    double c[3] = {pos[0], pos[1]     , pos[2]};
+    double t[3] = {pos[0], pos[1] + 1., pos[2]};
+
+    // get position and orientatino of new end effector
+    double y[6] = {pos[0], pos[1], pos[2], rot[0], rot[1], rot[2] };
+
+
+    // create jacobian matrix
+    int l = jointAngles.size();
+    double jaco[3][l];
+
+    // set all the values to 0
+    for(int i = 0; i < 3; i++)
+    {
+      for(int j = 0; j < l; j++)
+      {
+        jaco[i][j] = 0.; // set to 0.
+      }
+    }
+
+    // how we move to derive jacobian
+    double dSigma = 0.001;
+
+    // x coordinate of the end effector
+    double p1 = pos[0];
+
+    // where the hand ends up with forward kinematics
+    double p2;
+
+    // now find the list of parents to get to this point
+    vector<Joint *> fwdK;
+    Joint *p = j->parent;
+
+    while(p != NULL)
+    { // add to the stack
+      fwdK.push_back(p);
+      p = p->parent;
+    }
+
+    // cPos[1] = globalPositions[3 * cIndex + 1];
+    // cPos[0] = globalPositions[3 * cIndex];
+    // cPos[2] = globalPositions[3 * cIndex + 2];
+
+    // final position of end effector
+    Joint *cJ = fwdK[fwdK.size() - 1];   // current joint is the last one
+    int cIndex = cJ->index;
+    glm::vec4 cPos;                      // homogenius position
+
+    // find global start position
+    cPos.x = 1.;
+    cPos.y = 1.;
+    cPos.z = 1.;
+    cPos.w = 1.;
+
+    // now perform forward kinematics
+    for(int i = fwdK.size() - 1; i > -1; i--)
+    {
+      // which joint we are talking about
+      cJ = fwdK[i];
+      cIndex = cJ->index;
+
+
+      //add offset
+      double cOff[3] = {cJ->offset[0], cJ->offset[1], cJ->offset[2]};
+
+      cPos.x += cOff[0];
+      cPos.y += cOff[1];
+      cPos.z += cOff[2];
+
+      // multiply by local matrix
+      glm::mat4 m = cJ->localMatrix;
+
+      std::cout << fwdK[i]->name << '\n';
+      std::cout << "Pos: " << cPos.x << " " << cPos.y << " " << cPos.z << '\n';
+      std::cout << "Off: " << cOff[0] << " " << cOff[1] << " " << cOff[2] << '\n';
+      std::cout << "Local Matrix" << '\n';
+
+      // add the delta theta in the correct axis
+      // todo
+
+      for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+          std::cout << m[i][j] << ' ';
+        }
+        std::cout << "" << '\n';
+      }
+      std::cout << "" << '\n';
+      std::cout << "" << '\n';
+
+      // multiply by local matrix
+      cPos = cPos * m;
+
+    }
+    std::cout << "Final Pos: " << cPos.x << " " << cPos.y << " " << cPos.z << '\n';
+  }
+
+
+
+
+
+  //std::cout << "" << '\n';
 }
 
 ////////////////////////////////////////////////
@@ -431,6 +596,9 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
 {
 	glPushMatrix();
 
+  // remeber where the data reading starts
+  // for editing later
+  joint->dataStart = data;
 
 	// If this is the root notde
 	if ( joint->parent == NULL )
@@ -444,16 +612,28 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
 	}
 
 	// Apply local roations for this Joint
+  // and find out the rotations of each joint if available
 	unsigned int  i;
+  double thisRot;
 	for ( i = 0; i < joint->channels.size(); i++ )
 	{
 		Channel *  channel = joint->channels[ i ];
+    thisRot = data[channel->index];
 		if ( channel->type == X_ROTATION )
-			glRotatef( data[ channel->index ], 1.0f, 0.0f, 0.0f );
+    {
+      glRotatef( thisRot, 1.0f, 0.0f, 0.0f );
+      jointAngles[3 * joint->index]   = thisRot; // set X for this joint
+    }
 		else if ( channel->type == Y_ROTATION )
-			glRotatef( data[ channel->index ], 0.0f, 1.0f, 0.0f );
+    {
+      glRotatef( data[ channel->index ], 0.0f, 1.0f, 0.0f );
+      jointAngles[3 * joint->index + 1] = thisRot; // set Y for this joint
+    }
 		else if ( channel->type == Z_ROTATION )
-			glRotatef( data[ channel->index ], 0.0f, 0.0f, 1.0f );
+    {
+      glRotatef( data[ channel->index ], 0.0f, 0.0f, 1.0f );
+      jointAngles[3 * joint->index + 2]  = thisRot; // set Z for this joint
+    }
 	}
 
   // Now we have the local matrix for each position
@@ -587,21 +767,19 @@ void BVH::RenderControlPoints()
 {
   GLUquadric *quad;
   quad = gluNewQuadric();
-  Cartesian3 thisPos;
 
   // save current state and load identity
   glPushMatrix();
   //glLoadIdentity();
-  for(int i = 0; i < globalPositions.size(); i++)
+  for(int i = 0; i < (globalPositions.size() / 3); i++)
   {
     // change the colour to blue if being clicked on
     if(activeJoint == i) { glColor3f(1., 0., 0.); }
     else { glColor3f(0. , 0. , .6); }
 
-
-    thisPos = globalPositions[i];
+    // Find the global position to draw the point
     glPushMatrix();
-    glTranslatef(thisPos.x, thisPos.y, thisPos.z);
+    glTranslatef(globalPositions[3 * i], globalPositions[3 * i + 1], globalPositions[3 * i + 2]);
     gluSphere(quad, .5, 5, 5);
     glPopMatrix();
   }

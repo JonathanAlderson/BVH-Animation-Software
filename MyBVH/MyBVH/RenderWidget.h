@@ -62,6 +62,8 @@ class RenderWidget : public QGLWidget
 	bool lft;
 	bool rht;
 	bool bkw;
+	bool upp;
+	bool dwn;
 
 	// time options
 	QDateTime thisTime;
@@ -78,6 +80,11 @@ class RenderWidget : public QGLWidget
 	// Camera
 	Camera camera;
 	bool movingCamera;
+
+	// model interaction
+	bool xAxis;
+	bool yAxis;
+	bool zAxis;
 
 	// Mouse
 	float mouseLastX;

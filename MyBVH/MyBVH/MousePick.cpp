@@ -23,21 +23,26 @@
 
 #include "MousePick.h"
 
-MousePick::MousePick(std::vector<Cartesian3> *targetPoints, float size)
+MousePick::MousePick(std::vector<double> *targetPoints, float size)
 {
   this->targetPoints = targetPoints;
   dragging = false;
   closest = -1;
-  start = glm::vec2(0., 0.);
+  start = glm::vec3(0., 0., 0.);
   this->size = size;
 }
 
-glm::vec2 MousePick::drag(float x, float y)
+glm::vec3 MousePick::drag(float x, float y, Camera *camera)
 {
-  glm::vec2 curr = glm::vec2(x, y);
+  // make homogenius and work out the actual effect in world space
+  glm::vec4 curr = glm::vec4(x, y, 0., 1.);
 
-  glm::vec2 change = start - curr;
-  start = curr;
+  curr = curr * glm::inverse(camera->GetViewMatrix());
+
+  glm::vec3 curr3 = glm::vec3(curr.x, curr.y, curr.z);
+
+  glm::vec3 change = start - curr3;
+  start = curr3;
 
   return change;
 }
@@ -45,23 +50,25 @@ glm::vec2 MousePick::drag(float x, float y)
 // Finds the point that has been clicked
 int MousePick::click(float x, float y, Camera *camera)
 {
-  // Get orthographic matrix
-  float ortho[16];
-  glGetFloatv(GL_PROJECTION_MATRIX, ortho);
-  glm::mat4 proj = glm::make_mat4(ortho);
 
-  // get modelview matrix
-  float modelview[16];
-  glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-  glm::mat4 modelView = glm::make_mat4(modelview);
+  // Find projection matrix
+  float projM[16];
+  glGetFloatv(GL_PROJECTION_MATRIX, projM);
+  glm::mat4 proj = glm::make_mat4(projM);
+
 
   // ray starts from cameras position
   glm::vec3 rayStart = camera->Position;
 
-  // ray points where camera is
-  glm::vec3 rayDirection = camera->Front; // towards positive Z
 
-  float radiusSquared = .5;
+  // take into account where the mouse is looking
+  // ray direction based on where mouse is looking
+  // also depends on viewport aspect ratio and scale
+  glm::vec3 rayDirection = glm::vec3(x / proj[0][0], y / proj[1][1], -1.);
+  rayDirection = glm::normalize(rayDirection);
+
+  // hitbox size
+  float radiusSquared = .3;
 
   glm::vec3 intersectPosition;
   glm::vec3 intersectNormal;
@@ -74,69 +81,23 @@ int MousePick::click(float x, float y, Camera *camera)
   dragging = false;
   closest = -1;
 
-  //
-  // std::cout << "Proj" << '\n';
-  // for(int i = 0; i < 4; i ++)
-  // {
-  //   for(int j = 0; j < 4; j ++)
-  //   {
-  //     std::cout << proj[i][j] << ' ';
-  //   }
-  //   std::cout << " " << '\n';
-  // }
-  //
-  // std::cout << "modelView" << '\n';
-  // for(int i = 0; i < 4; i ++)
-  // {
-  //   for(int j = 0; j < 4; j ++)
-  //   {
-  //     std::cout << modelView[i][j] << ' ';
-  //   }
-  //   std::cout << " " << '\n';
-  // }
-  //
-  //
-
-  std::cout << "x: " << x << '\n';
-  std::cout << "y: " << y << '\n';
-  std::cout << camera->Zoom << '\n';
-
-  // std::cout << "Ray o: ";
-  // for(int i = 0; i < 3; i++){ std::cout << rayStart[i] << ' ';}
-  // std::cout << "" << '\n';
-  // std::cout << "Ray Dir: ";
-  // for(int i = 0; i < 3; i++){ std::cout << rayDirection[i] << ' ';}
-  // std::cout << "" << '\n';
-
-  //
-  // std::cout << "First Target" << '\n';
-  // std::cout << targetPoints[0][0] << '\n';
-
-
   // Test every point to see which is the closest
-  for(unsigned int i = 0; i < 1; i++)
+  for(unsigned int i = 0; i < (targetPoints->size() / 3); i++)
   {
-
-    //std::cout << "Target: " << targetPoints[0][i] << " " << '\n';
-
-    sphereCenter4 = glm::vec4(targetPoints[0][i].x,
-                              targetPoints[0][i].y,
-                              targetPoints[0][i].z,
+    sphereCenter4 = glm::vec4(targetPoints[0][3 * i]     - rayStart.x,
+                              targetPoints[0][3 * i + 1] - rayStart.y,
+                              targetPoints[0][3 * i + 2] - rayStart.z,
                               1.0);
 
-
-
     // calculate point with model view matrix
-    //sphereCenter4 = sphereCenter4 * glm::inverse(modelView);
-    sphereCenter = glm::vec3(sphereCenter4.x, sphereCenter4.y, sphereCenter4.z);
+    sphereCenter4 = sphereCenter4 * glm::inverse(camera->GetViewMatrix());
 
+    // readjust for the position
+    sphereCenter = glm::vec3(sphereCenter4.x + rayStart.x,
+                             sphereCenter4.y + rayStart.y,
+                             sphereCenter4.z + rayStart.z);
 
-    // std::cout << "Target" << '\n';
-    // for(int i = 0; i < 4; i++){ std::cout << sphereCenter4[i] << ' ';}
-    // std::cout << "" << '\n';
-    // std::cout << " " << '\n';
-
-
+    // calculate the intersection
     intersect = glm::intersectRaySphere(rayStart,
                                         rayDirection,
                                         sphereCenter,
@@ -148,9 +109,9 @@ int MousePick::click(float x, float y, Camera *camera)
     // If a point has intersected
     if(intersect == true)
     {
-      std::cout << "Intersect" << '\n';
+      std::cout << "" << '\n';
       dragging = true;
-      start = glm::vec2(x, y);
+      start = glm::vec3(x, y, 0.);
       // keep track of which point is closest to the camera
       if(sphereCenter4.z < closestDist)
       {

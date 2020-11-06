@@ -35,11 +35,13 @@ RenderWidget::RenderWidget(char *filename, MasterWidget *parent)
 		std::cout << "Reading: ";
 		std::cout << filename << '\n';
 
-		std::cout << "COORDS" << '\n';
-		std::cout << bvh->minCoords << '\n';
-		std::cout << bvh->maxCoords << '\n';
-		std::cout << bvh->boundingBoxSize << '\n';
-		std::cout << "---------" << '\n';
+
+		// movement constraints
+		// unconstrained at start
+		xAxis = true;
+		yAxis = true;
+		zAxis = true;
+
 
 		// set default values
 		whichButton = -1;
@@ -193,9 +195,6 @@ void RenderWidget::paintGL()
 	// render the control points
 	bvh->RenderControlPoints();
 
-
-
-
 	} // RenderWidget::paintGL()
 
 // mouse-handling
@@ -207,28 +206,22 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	// find the minimum of height & width
 	float size = (width() > height()) ? height() : width();
 
-	// TODO Mouse Move To Camera
-	float currX = (2.0 * event->x() - width()) / size;
-	float currY = (height() - 2.0 * event->y() ) / size;
+	float currX = (2.0 * event->x() - width()) / width();
+	float currY = (height() - 2.0 * event->y() ) / height();
 
 	// start moving the camera if we click
 	if(whichButton == 1)
 	{
 		movingCamera = true;
 	}
+	camera.updateCameraVectors();
 
-	// Perform Mouse Picking
+	// Perform Mouse Picking -1 if no match
 	int clicked = mousePicker->click(currX, currY, &camera);
 	bvh->activeJoint = clicked;
 
-	if(clicked != -1) // if are dragging a point
-	{
-			// TODO
-			// Move Object
-
-	}
-
-
+	// So we can see the newly highlighted joint
+	updateGL();
 	} // RenderWidget::mousePressEvent()
 
 void RenderWidget::mouseMoveEvent(QMouseEvent *event)
@@ -237,26 +230,47 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *event)
 	float size = (width() > height()) ? height() : width();
 
 	// TODO Mouse Move To Camera
-	float currX = (2.0 * event->x() - width()) / size;
-	float currY = (height() - 2.0 * event->y() ) / size;
+	float currX = (2.0 * event->x() - width()) / width();
+	float currY = (height() - 2.0 * event->y() ) / height();
 
 	// rotate the camera if clicking
-	if(movingCamera)
+	// now either translate or rotate object or light
+	if(mousePicker->dragging == true)
+	{
+		glm::vec3 mouseMove = mousePicker->drag(currX, currY, &camera);
+
+		mouseMove.x = -mouseMove.x;
+		mouseMove.y = -mouseMove.y;
+
+		// TODO make this a sensetivity
+		mouseMove *= 50.0;
+
+		// now contrain the axis based on current settings
+		if(xAxis == false){ mouseMove.x = 0; }
+		if(yAxis == false){ mouseMove.y = 0; }
+		if(zAxis == false){ mouseMove.z = 0; }
+
+		std::cout << "" << '\n';
+		for(int i = 0; i < 3; i++)
+		{
+			std::cout << mouseMove[i] << "  ";
+		}
+		std::cout << "" << '\n';
+
+		bvh->MoveJoint(mousePicker->closest, mouseMove, 1);
+		// TODO
+		paintGL();
+		updateGL();
+	}
+
+	// only move the camera if we are not dragging
+	else if(movingCamera)
 	{
 		camera.ProcessMouseMovement((mouseLastX - currX) * 200., (mouseLastY - currY) * 200.);
 		paintGL();
 		updateGL();
 	}
 
-	// Move Correct Model Part
-
-	// now either translate or rotate object or light
-	if(mousePicker->dragging == true)
-	{
-		// TODO
-		paintGL();
-		updateGL();
-	}
 	// Update
 	mouseLastY = currY;
 	mouseLastX = currX;
@@ -325,12 +339,14 @@ void RenderWidget::timerUpdate()
 
 	bool updateNeeded = false;
 
-	if(fwd){ camera.ProcessKeyboard(FORWARD, delta / 300.); }
-	if(lft){ camera.ProcessKeyboard(LEFT, delta / 300.); }
-	if(rht){ camera.ProcessKeyboard(RIGHT, delta / 300.); }
+	if(fwd){ camera.ProcessKeyboard(FORWARD , delta / 300.); }
+	if(lft){ camera.ProcessKeyboard(LEFT    , delta / 300.); }
+	if(rht){ camera.ProcessKeyboard(RIGHT   , delta / 300.); }
 	if(bkw){ camera.ProcessKeyboard(BACKWARD, delta / 300.); }
+	if(upp){ camera.ProcessKeyboard(UP      , delta / 300.); }
+	if(dwn){ camera.ProcessKeyboard(DOWN    , delta / 300.); }
 
-	if(fwd || lft || rht || bkw)
+	if(fwd || lft || rht || bkw || upp || dwn)
 	{
 		updateNeeded = true;
 	}
@@ -348,7 +364,7 @@ void RenderWidget::timerUpdate()
 			cFrame = frame;
 			updateNeeded = true;
 
-			parentWidget->updateText(cFrame, playbackSpeed);
+
 		}
 	}
 
@@ -360,4 +376,5 @@ void RenderWidget::timerUpdate()
 	{
 		updateGL();
 	}
+	parentWidget->updateText(cFrame, playbackSpeed);
 }
