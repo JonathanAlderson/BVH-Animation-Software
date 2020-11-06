@@ -473,8 +473,8 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     std::cout << "INVERSEKINEMATICS" << '\n';
 
     // start and end points
-    double c[3] = {pos[0], pos[1]     , pos[2]};
-    double t[3] = {pos[0], pos[1] + 1., pos[2]};
+    double c[3] = {pos[0]         , pos[1]         , pos[2]         };
+    double t[3] = {pos[0] + move.x, pos[1] + move.y, pos[2] + move.z};
 
     // get position and orientatino of new end effector
     double y[6] = {pos[0], pos[1], pos[2], rot[0], rot[1], rot[2] };
@@ -482,27 +482,27 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
 
     // create jacobian matrix
     int l = jointAngles.size();
-    double jaco[3][l];
+    double jacobian[3][l];
 
     // set all the values to 0
     for(int i = 0; i < 3; i++)
     {
       for(int j = 0; j < l; j++)
       {
-        jaco[i][j] = 0.; // set to 0.
+        jacobian[i][j] = 0.; // set to 0.
       }
     }
 
-    // how we move to derive jacobian
-    double dSigma = 0.001;
 
-    // x coordinate of the end effector
-    double p1 = pos[0];
+    ///////////////////
+    // derive Jacobian
+    //////////////////
+    float p1;
+    float p2;
+    float dSigma = 0.001;
 
-    // where the hand ends up with forward kinematics
-    double p2;
 
-    // now find the list of parents to get to this point
+    // find list of parents
     vector<Joint *> fwdK;
     Joint *p = j->parent;
 
@@ -512,61 +512,67 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
       p = p->parent;
     }
 
-    // cPos[1] = globalPositions[3 * cIndex + 1];
-    // cPos[0] = globalPositions[3 * cIndex];
-    // cPos[2] = globalPositions[3 * cIndex + 2];
+    Joint *cJ;       // current joint
+    int cIndex;      // current index
+    glm::vec4 cPos;  // homogenius current position
+    glm::vec3 rotAxis; // roatation axis we are calculating
+    glm::mat4 m;       // matrix for forward kinematics
 
-    // final position of end effector
-    Joint *cJ = fwdK[fwdK.size() - 1];   // current joint is the last one
-    int cIndex = cJ->index;
-    glm::vec4 cPos;                      // homogenius position
+    // for every parent joint
+    for(int cParent = fwdK.size() - 1; cParent > -1; cParent--)
+    { // for every rotataion we neeed to test
+      for(int thisAction = 0; thisAction < 3; thisAction++)
+      {
 
-    // find global start position
-    cPos.x = 1.;
-    cPos.y = 1.;
-    cPos.z = 1.;
-    cPos.w = 1.;
+        // coordinate of the end effector we care about
+        if(thisAction == X_ROTATION){ p1 = pos[0]; }
+        if(thisAction == Y_ROTATION){ p1 = pos[1]; }
+        if(thisAction == Z_ROTATION){ p1 = pos[2]; }
 
-    // now perform forward kinematics
-    for(int i = fwdK.size() - 1; i > -1; i--)
-    {
-      // which joint we are talking about
-      cJ = fwdK[i];
-      cIndex = cJ->index;
+        // reset global postion
+        cPos.x = 1.;
+        cPos.y = 1.;
+        cPos.z = 1.;
+        cPos.w = 1.;
 
+        // forward Kinematics with one
+        // extra rotation
+        for(int i = fwdK.size() - 1; i > -1; i--)
+        {
+          // which joint we are talking about
+          cJ = fwdK[i];
+          cIndex = cJ->index;
 
-      //add offset
-      double cOff[3] = {cJ->offset[0], cJ->offset[1], cJ->offset[2]};
+          // multiply by local matrix
+          m = cJ->localMatrix;
 
-      cPos.x += cOff[0];
-      cPos.y += cOff[1];
-      cPos.z += cOff[2];
+          // if this is the start position we are interested in
+          // apply the small delta rotation
+          if(i == cParent)
+          { // find the correct rotation axis
+            if(thisAction == X_ROTATION){ rotAxis = glm::vec3(m[0][0], m[1][0], m[2][0]); }
+            if(thisAction == Y_ROTATION){ rotAxis = glm::vec3(m[0][1], m[1][1], m[2][1]); }
+            if(thisAction == Z_ROTATION){ rotAxis = glm::vec3(m[0][2], m[1][2], m[2][2]); }
+            // rotate by the corract axis in local space
+            m = glm::rotate(m, dSigma, rotAxis);
+          }
 
-      // multiply by local matrix
-      glm::mat4 m = cJ->localMatrix;
-
-      std::cout << fwdK[i]->name << '\n';
-      std::cout << "Pos: " << cPos.x << " " << cPos.y << " " << cPos.z << '\n';
-      std::cout << "Off: " << cOff[0] << " " << cOff[1] << " " << cOff[2] << '\n';
-      std::cout << "Local Matrix" << '\n';
-
-      // add the delta theta in the correct axis
-      // todo
-
-      for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-          std::cout << m[i][j] << ' ';
+          cPos = m * cPos;
         }
-        std::cout << "" << '\n';
+
+        // set the value in the jacobian
+        std::cout << "Setting jacobian " << thisAction << " " << fwdK[cParent]->index << " to " << (p2 - p1) / dSigma << '\n';
+        jacobian[thisAction][fwdK[cParent]->index] = (p2 - p1) / dSigma;
       }
-      std::cout << "" << '\n';
-      std::cout << "" << '\n';
-
-      // multiply by local matrix
-      cPos = cPos * m;
-
     }
-    std::cout << "Final Pos: " << cPos.x << " " << cPos.y << " " << cPos.z << '\n';
+
+    /////////////////////////
+    // Solve Jacobian
+    ////////////////////////
+    glm::glm::transpose(jacobian)
+
+
+
   }
 
 
