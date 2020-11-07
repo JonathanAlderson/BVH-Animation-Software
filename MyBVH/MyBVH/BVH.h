@@ -27,6 +27,15 @@ using namespace std;
 #include <Eigen/Core>
 #include <Eigen/LU>
 
+// openGL includes
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <GL/gl.h>
+#include <GL/glu.h>
+#endif
+
 class BVH
 {
 // constructors and destructors
@@ -156,7 +165,7 @@ public:
 	void  RenderFigure(Joint * root, double * data, float scale, Camera *camera);
 
   // Expect a lot of calls to this one
-  void RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius = 0.1 );
+  glm::mat4 RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius = 0.1 );
 
   // Renders the points where a user can click
   void RenderControlPoints();

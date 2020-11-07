@@ -220,7 +220,7 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	// Perform Mouse Picking -1 if no match
 	int clicked = mousePicker->click(currX, currY, &camera);
 	bvh->activeJoint = clicked;
-
+	
 	// So we can see the newly highlighted joint
 	updateGL();
 	} // RenderWidget::mousePressEvent()
