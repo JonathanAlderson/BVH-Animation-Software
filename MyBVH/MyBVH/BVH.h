@@ -24,6 +24,8 @@ using namespace std;
 #include "camera.h"
 #include "glm.hpp"
 #include "gtc/type_ptr.hpp"
+#include <Eigen/Core>
+#include <Eigen/LU>
 
 class BVH
 {

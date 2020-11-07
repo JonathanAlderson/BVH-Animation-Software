@@ -190,6 +190,7 @@ void RenderWidget::paintGL()
 	// Render Skeleton At Current Frame
 	bvh->RenderFigure(cFrame, 1.0, &camera);
 
+
 	glTranslatef(xTrans, yTrans, -(zTrans - 25.));
 
 	// render the control points
