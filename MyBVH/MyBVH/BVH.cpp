@@ -424,22 +424,6 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
   Joint *j = joints[id];
   vector<Channel *> chn = j->channels;
 
-  double rot[3] = {0., 0., 0.};
-  double pos[3] = {0., 0., 0.};
-
-  // read position
-  pos[0] = globalPositions[3 * j->index];
-  pos[1] = globalPositions[3 * j->index + 1];
-  pos[2] = globalPositions[3 * j->index + 2];
-
-  // read rotation
-  for(int i = 0; i < chn.size(); i++)
-  {
-    if(chn[i]->type == 0){ rot[0] = j->dataStart[chn[i]->index]; }
-    if(chn[i]->type == 1){ rot[1] = j->dataStart[chn[i]->index]; }
-    if(chn[i]->type == 2){ rot[2] = j->dataStart[chn[i]->index]; }
-  }
-
   // Do a Simple Rotation On The Object
   if(mode == ROTATE)
   {
@@ -454,18 +438,21 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
   // Do IK
   if(mode == INVERSEKINEMATICS)
   {
-    std::cout << "" << '\n';
-    std::cout << "" << '\n';
-    std::cout << "INVERSEKINEMATICS" << '\n';
+
+      double pos[3] = {0., 0., 0.};
+
+
+    // now subtract the worldspace transformation to put
+    // the character in view
+    glm::vec3 offset = glm::vec3(- (maxCoords.x + minCoords.x) / 2., -(maxCoords.y + minCoords.y) / 2., -(minCoords.z - 25.));
 
     // start and end points
-    double c[3] = {pos[0]         , pos[1]         , pos[2]         };
-    double t[3] = {pos[0] + move.x, pos[1] + move.y, pos[2] + move.z};
+    glm::vec3 p1 = glm::vec3(globalPositions[3 * j->index    ] + offset.x,
+                             globalPositions[3 * j->index + 1] + offset.y,
+                             globalPositions[3 * j->index + 2] + offset.z);
+    glm::vec3 p2 = {p1.x + move.x         , p1.y + move.y         , p1.z + move.z        };
+    //double t[3] = {pos[0] + move.x, pos[1] + move.y, pos[2] + move.z};
 
-    // get position and orientatino of new end effector
-    double y[6] = {pos[0], pos[1], pos[2], rot[0], rot[1], rot[2] };
-
-    //std::cout << "Global End: " << pos[0] <<  "  " << pos[1] << "  " << pos[2] << '\n';
 
     // create jacobian matrix
     int l = jointAngles.size();
@@ -484,8 +471,6 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     ///////////////////
     // derive Jacobian
     //////////////////
-    float p1;
-    float p2;
     float dSigma = 10.;
 
 
@@ -501,41 +486,41 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     }
 
     // local position of end effector
-    float localTest[3] = {3.57476, -15.2148 -0.568876};
 
     Joint *cJ;       // current joint
     int cIndex;      // current index
     glm::vec4 cPos;  // homogenius current position
     glm::vec3 rotAxis; // roatation axis we are calculating
     glm::mat4 m;       // matrix for forward kinematics
-    glm::mat4 mFinal = glm::mat4(1.);
     glm::vec4 thisTranslation;
+    int numChannels = 0;
+
+    std::vector<glm::mat4> matrixChain;
 
     // for every parent joint
-    for(int cParent = fwdK.size() - 1; cParent >0-1; cParent--)
-    { // for every rotataion we neeed to test
-      // std::cout << "------------" << '\n';
-      // std::cout << cParent << " " << fwdK[cParent]->name << '\n';
-      // std::cout << "" << '\n';
+    for(int cParent = fwdK.size() - 1; cParent >  -1; cParent--)
+    {
+      // how many channels this specific joint has
+      numChannels = fwdK[cParent]->channels.size();
 
-      for(int thisAction = 0; thisAction < 3; thisAction++)
+      // can't have more than 3
+      numChannels = std::min(numChannels, 3);
+
+
+      // for every rotation this joint has
+      for(int thisAction = 0; thisAction < numChannels; thisAction++)
       {
 
-        // coordinate of the end effector we care about
-        // if(thisAction == X_ROTATION){ p1 = pos[0]; }
-        // if(thisAction == Y_ROTATION){ p1 = pos[1]; }
-        // if(thisAction == Z_ROTATION){ p1 = pos[2]; }
-        if(thisAction == X_ROTATION){ p1 = localTest[0]; }
-        if(thisAction == Y_ROTATION){ p1 = localTest[1]; }
-        if(thisAction == Z_ROTATION){ p1 = localTest[2]; }
-        //std::cout << "This: " << localTest[0] << '\n';
-        //std::cout << "P1: " << p1 << '\n';
+        //std::cout << "This action: " << thisAction << " index: " << fwdK[cParent]->channels[thisAction]->index << '\n';
 
         // reset global postion
         cPos.x = 0.;
         cPos.y = 0.;
         cPos.z = 0.;
         cPos.w = 1.;
+
+        // reset matrix chain
+        matrixChain.clear();
 
         // forward Kinematics with one
         // extra rotation
@@ -548,97 +533,36 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
           // get the local matrix
           m = cJ->localMatrix;
 
-          // std::cout << "Local Matrix for: " << cJ->name << '\n';
-          // for(int k = 0; k < 4; k++)
-          // {
-          //   for(int l = 0; l < 4; l++)
-          //   {
-          //     std::cout << m[l][k] << "          ";
-          //   }
-          //   std::cout << " " << '\n';
-          // }
-
-
-          // apply the translation from the local matrix
-          // in the current mFinal space
-          //thisTranslation = glm::vec4(m[3][0], m[3][1], m[3][2], 0.);
-
-          //std::cout << "" << '\n';
-          //std::cout << "This Translation: " << thisTranslation.x << " " << thisTranslation.y << " " << thisTranslation.z << '\n';
-          //thisTranslation = thisTranslation * mFinal;
-          //std::cout << "x mFinal:  " << thisTranslation.x << " " << thisTranslation.y << " " << thisTranslation.z << '\n';
-
-          // reset translation in m
-          //m[3][0] = 0.;
-          //m[3][1] = 0.;
-          //m[3][2] = 0.;
-
-
-          // put translation into mFinal
-          //mFinal[3][0] = thisTranslation.x;
-          //mFinal[3][1] = thisTranslation.y;
-          //mFinal[3][2] = thisTranslation.z;
-
-
           // if this is the start position we are interested in
           // apply the small delta rotation
           if(i == cParent)
           {
-            //std::cout << "Yes" << '\n';
-
             // find the correct rotation axis
-            if(thisAction == X_ROTATION){ rotAxis = glm::vec3(m[0][0], m[1][0], m[2][0]); }
-            if(thisAction == Y_ROTATION){ rotAxis = glm::vec3(m[0][1], m[1][1], m[2][1]); }
-            if(thisAction == Z_ROTATION){ rotAxis = glm::vec3(m[0][2], m[1][2], m[2][2]); }
+            if(thisAction == X_ROTATION){ rotAxis = glm::vec3(m[0][0], m[0][1], m[0][2]); }
+            if(thisAction == Y_ROTATION){ rotAxis = glm::vec3(m[1][0], m[1][1], m[1][2]); }
+            if(thisAction == Z_ROTATION){ rotAxis = glm::vec3(m[2][0], m[2][1], m[2][2]); }
             // rotate by the corract axis in local space
             m = glm::rotate(m, dSigma, rotAxis);
           }
 
-          // report translation in the current matrix space
-          mFinal = m * mFinal;
-          //cPos = mFinal * cPos;
-
-
-
-          // std::cout << "----------------" << '\n';
-          // std::cout << "Current Total Rotation Matrix" << '\n';
-          // std::cout << "----------------" << '\n';
-          // for(int k = 0; k < 4; k++)
-          // {
-          //   for(int l = 0; l < 4; l++)
-          //   {
-          //     std::cout << mFinal[l][k] << "          ";
-          //   }
-          //   std::cout << " " << '\n';
-          // }
-
-          // std::cout << "" << '\n';
-          // std::cout << "    Cpos:       " << cPos.x <<  "  " << cPos.y << "  " << cPos.z << "  " << cPos.w << '\n';
-          // std::cout << "-----------------" << '\n';
-          // add the offset
-          //cPos.x += cJ->offset[0];
-          //cPos.y += cJ->offset[1];
-          //cPos.z += cJ->  //std::cout << "With Offset:       " << cPos.x <<  "  " << cPos.y << "  " << cPos.z << '\n';[2];
-
-          //std::cout << "With Offset:       " << cPos.x <<  "  " << cPos.y << "  " << cPos.z << '\n';
-
-          //std::cout << cJ->offset[0] << " " << cJ->offset[1] << " " << cJ->offset[2] << '\n';
+          // add to the matrix chain
+          matrixChain.push_back(m);
         }
 
-        cPos = mFinal * cPos;
-        //std::cout << "End Pos" << '\n';
-        //std::cout << cPos.x << " " << cPos.y << " " << cPos.z << '\n';
+        // forward kinematics on matrix chain
+        for(int i = 0; i < matrixChain.size(); i++)
+        {
+          cPos = matrixChain[i] * cPos;
+        }
 
-        // find the correct component from cPos at the end
-        if(thisAction == X_ROTATION){ p2 = cPos.x; }
-        if(thisAction == Y_ROTATION){ p2 = cPos.y; }
-        if(thisAction == Z_ROTATION){ p2 = cPos.z; }
+        p2 = cPos;
+
+        glm::vec3 change = (p2 - p1);
 
         // set the value in the jacobian
-        jacobian[thisAction][fwdK[cParent]->index] = (p2 - p1) / dSigma;
-
-        std::cout << "Setting: " << thisAction << " " << fwdK[cParent]->index << "   p1:  " << p1 << "  p2: " << p2 << "            --> " << (p2 - p1) / dSigma << '\n';
-
+        jacobian[0][fwdK[cParent]->channels[thisAction]->index] = change.x / dSigma;
+        jacobian[1][fwdK[cParent]->channels[thisAction]->index] = change.y / dSigma;
+        jacobian[2][fwdK[cParent]->channels[thisAction]->index] = change.z / dSigma;
       }
     }
 
@@ -648,9 +572,9 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
 
     // V matrix
     Eigen::Vector3d v;
-    v[0] =  (double)(t[0] - c[0]);
-    v[1] =  (double)(t[1] - c[1]);
-    v[2] =  (double)(t[2] - c[2]);
+    v[0] =  (double)(p2.x - p1.x);
+    v[1] =  (double)(p2.y - p1.y);
+    v[2] =  (double)(p2.z - p1.z);
 
     // Jacobian
     Eigen::MatrixXd jaco;
@@ -673,17 +597,8 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     psJaco = psJaco.inverse();
     psJaco = jacoT * psJaco;
 
-    //std::cout << psJaco << '\n';
-    //Eigen::MatrixXd psJaco = (jacoT * jaco);
-    //psJaco = psJaco.inverse();
-
-    //psJaco = psJaco * jacoT;
-
     // psJaco * V = delta
     Eigen::MatrixXd deltaM = psJaco * v;
-
-    std::cout << "deltaM" << '\n';
-    std::cout << deltaM << '\n';
 
 
     //////////////////////////
@@ -692,18 +607,40 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     vector<Channel *> chn;
     float change;
 
-    for(int i = 0; i < deltaM.row(0).size(); i++)
+    int jointIndex;
+
+    //std::cout << "CHAINGES" << '\n';
+
+    // step through delta M
+    for(int i = 0; i < deltaM.size(); i+= 3)
     {
-      std::cout << deltaM.row(0)[i] << '\n';
-      change = deltaM.row(0)[i];
-      chn = joints[i]->channels;
-      
-      for(int i = 0; i < chn.size(); i++)
+
+      // the index of the joint this item relates to
+      jointIndex = channels[i]->joint->index;
+
+      // iterate through this joints channels
+      chn = joints[jointIndex]->channels;
+
+
+      for(int j = 0; j < chn.size(); j++)
       {
-        if(chn[i]->type == 0){ joints[i]->dataStart[chn[i]->index] += change; } // X ROTATION
-        if(chn[i]->type == 1){ joints[i]->dataStart[chn[i]->index] += change; } // Y ROTATION
-        if(chn[i]->type == 2){ joints[i]->dataStart[chn[i]->index] += change; } // Z ROTATION
+        if(chn[j]->type == 0) // X
+        {
+          //if(deltaM(i, 0) != 0.){ std::cout << "Name: " << joints[jointIndex]->name << std::endl; std::cout << " x " << deltaM(i, 0)  << "\n\n" << std::endl;}
+          joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i, 0);  // X ROTATION
+        }
+        if(chn[j]->type == 1) // Y
+        {
+          //if(deltaM(i + 1, 0) != 0.){ std::cout << "Name: " <<  joints[jointIndex]->name << std::endl; std::cout << " y " << deltaM(i + 1, 0) << "\n\n" << std::endl;}
+          joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i + 1, 0); // Y ROTATION
+        }
+        if(chn[j]->type == 2) // Z
+        {
+          //if(deltaM(i +2, 0) != 0.){ std::cout << "Name: " <<  joints[jointIndex]->name << std::endl; std::cout << " z " << deltaM(i + 2, 0)<< "\n\n" << std::endl;}
+          joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i + 2, 0); // Z ROTATION
+        }
       }
+      std::cout << "" << '\n';
     }
 
   }
@@ -742,9 +679,8 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
   joint->dataStart = data;
 
   // we also calculate the local matrix at this point in time too
-  //glm::mat4 tempLocal = glm::mat4(1.); // create the identity
+  glm::mat4 tempLocal = glm::mat4(1.); // create the identity
   float offsets[3] = {0., 0., 0.};
-  float rotations[3] = {0., 0., 0.};
   GLfloat model[16];
 
 	// If this is the root notde
@@ -770,9 +706,6 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
 
   glTranslatef(offsets[0], offsets[1], offsets[2]);
 
-  // compute the translation in our local matrix too
-  //if(joint->parent == NULL){ tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0] + model[12], offsets[1] + model[13], offsets[2] + model[14]));  }
-  //else                     { tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0]            , offsets[1]            , offsets[2]            )); }
   //tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0]            , offsets[1]            , offsets[2]            ));
   //tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0]            , offsets[1]            , offsets[2]            ));
 
@@ -798,24 +731,21 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
       glRotatef( thisRot, 1.0f, 0.0f, 0.0f );
       jointAngles[3 * joint->index]   = thisRot; // set X for this joint
       //std::cout << "X Rot: " << thisRot << '\n';
-      //tempLocal = glm::rotate(tempLocal, (float)thisRot, glm::vec3(1., 0., 0.)); // also find local matrix
-      rotations[0] = thisRot; // for calculating local axis
+      tempLocal = glm::rotate(tempLocal, (float)thisRot, glm::vec3(1., 0., 0.)); // also find local matrix
     }
 		else if ( channel->type == Y_ROTATION )
     {
       glRotatef( data[ channel->index ], 0.0f, 1.0f, 0.0f );
       jointAngles[3 * joint->index + 1] = thisRot; // set Y for this joint
       //std::cout << "Y Rot: " << thisRot << '\n';
-      //tempLocal = glm::rotate(tempLocal, (float)thisRot, glm::vec3(0., 1., 0.)); // also find local matrix
-      rotations[1] = thisRot; // for calculating local axis
+      tempLocal = glm::rotate(tempLocal, (float)thisRot, glm::vec3(0., 1., 0.)); // also find local matrix
     }
 		else if ( channel->type == Z_ROTATION )
     {
       glRotatef( data[ channel->index ], 0.0f, 0.0f, 1.0f );
       jointAngles[3 * joint->index + 2]  = thisRot; // set Z for this joint
       //std::cout << "Z Rot: " << thisRot << '\n';
-      //tempLocal = glm::rotate(tempLocal, (float)thisRot, glm::vec3(0., 0., 1.)); // also find local matrix
-      rotations[2] = thisRot; // for calculating local axis
+      tempLocal = glm::rotate(tempLocal, (float)thisRot, glm::vec3(0., 0., 1.)); // also find local matrix
     }
 	}
 
@@ -831,21 +761,23 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
   // }
   // std::cout << "----------" << '\n';
 
-  // find the local matrix from the bone calculations
-  glm::mat4 localM;
+
+  // finally add the translation in our local matrix too
+  //if(joint->parent == NULL){ tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0] + model[12], offsets[1] + model[13], offsets[2] + model[14]));  }
+  //else                     { tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0]            , offsets[1]            , offsets[2]            )); }
+  tempLocal = glm::translate(tempLocal, glm::vec3(offsets[0]            , offsets[1]            , offsets[2]            ));
+  joint->localMatrix = tempLocal;
 
   // we are at the end, so use SITE data
 	if ( joint->children.size() == 0 )
 	{
-    //std::cout << "Bone " << joint->name << '\n';
-		localM = RenderBone(0.0f, 0.0f, 0.0f, joint->site[ 0 ] * scale, joint->site[ 1 ] * scale, joint->site[ 2 ] * scale );
+		RenderBone(0.0f, 0.0f, 0.0f, joint->site[ 0 ] * scale, joint->site[ 1 ] * scale, joint->site[ 2 ] * scale );
 	}
 	// We are going to a child, so draw to there
 	if ( joint->children.size() == 1 )
 	{
-    //std::cout << "Bone " << joint->name << '\n';
 		Joint *  child = joint->children[ 0 ];
-		localM = RenderBone(0.0f, 0.0f, 0.0f, child->offset[ 0 ] * scale, child->offset[ 1 ] * scale, child->offset[ 2 ] * scale );
+		RenderBone(0.0f, 0.0f, 0.0f, child->offset[ 0 ] * scale, child->offset[ 1 ] * scale, child->offset[ 2 ] * scale );
 	}
 	// else, draw to midpoint
 	if ( joint->children.size() > 1 )
@@ -864,8 +796,7 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
 		center[ 2 ] /= joint->children.size() + 1;
 
 		// Put this bone at the center of your kids
-    //std::cout << "Bone " << joint->name << '\n';
-		localM = RenderBone(0.0f, 0.0f, 0.0f, center[ 0 ] * scale, center[ 1 ] * scale, center[ 2 ] * scale );
+		RenderBone(0.0f, 0.0f, 0.0f, center[ 0 ] * scale, center[ 1 ] * scale, center[ 2 ] * scale );
 
 		// Render the Bones of all your children
 		for ( i = 0; i < joint->children.size(); i++ )
@@ -885,10 +816,6 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
   // {
   //   localM = glm::rotate(localM, (float)rotations[i], glm::vec3(localM[0][i], localM[1][i], localM[2][i])); // also find local matrix
   // }
-  // apply the translations to the local matrix
-  localM[3][0] = offsets[0]; // x offset
-  localM[3][1] = offsets[1]; // y offset
-  localM[3][2] = offsets[2]; // z offset
 
   // std::cout << offsets[0] << " " << offsets[1] << " " << offsets[2] << '\n';
   //
@@ -902,10 +829,6 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
   // }
 
 
-  // assign the local matrix to be
-  // returned value form Render Bone
-  joint->localMatrix = localM; // * tempLocal;
-
 	// Call this function recursively on children
 	for ( i = 0; i < joint->children.size(); i++ )
 	{
@@ -918,7 +841,7 @@ void  BVH::RenderFigure(Joint * joint, double * data, float scale, Camera *camer
 
 // Renders a single bone (Happends a lot)
 // returns the local rotation matrix
-glm::mat4 BVH::RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius )
+void BVH::RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius )
 {
 
 	// Calculate a from -> to vector
@@ -978,9 +901,6 @@ glm::mat4 BVH::RenderBone(float x0, float y0, float z0, float x1, float y1, floa
       	                    up_x,   up_y,   up_z,   0.0,
       	                    dir_x,  dir_y,  dir_z,  0.0,
       	                    0.0,    0.0,    0.0,    1.0 };
-  // assign the to the pointer
-  glm::mat4 localM = glm::make_mat4(m);
-
 
 	glMultMatrixd( m );
 
@@ -993,8 +913,6 @@ glm::mat4 BVH::RenderBone(float x0, float y0, float z0, float x1, float y1, floa
 	gluCylinder( quad_obj, radius, radius, bone_length, slices, stack );
 
 	glPopMatrix();
-
-  return localM;
 }
 
 // Renders the points where a user can click

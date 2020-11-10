@@ -165,7 +165,7 @@ public:
 	void  RenderFigure(Joint * root, double * data, float scale, Camera *camera);
 
   // Expect a lot of calls to this one
-  glm::mat4 RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius = 0.1 );
+  void RenderBone(float x0, float y0, float z0, float x1, float y1, float z1, float bRadius = 0.1 );
 
   // Renders the points where a user can click
   void RenderControlPoints();
