@@ -112,6 +112,8 @@ class RenderWidget : public QGLWidget
 	virtual void mouseMoveEvent(QMouseEvent *event);
 	virtual void mouseReleaseEvent(QMouseEvent *event);
 
+	// delete this
+	bool doneOnce;
 
 	// Resizing functions
 	QSize minimumSizeHint();
@@ -121,6 +123,8 @@ class RenderWidget : public QGLWidget
 	public slots:
 		void loadButtonPressed();
 		void timerUpdate();
+
+
 
 
 	}; // class RenderWidget

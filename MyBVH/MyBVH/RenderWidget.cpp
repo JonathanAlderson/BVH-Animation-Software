@@ -42,6 +42,8 @@ RenderWidget::RenderWidget(char *filename, MasterWidget *parent)
 		yAxis = true;
 		zAxis = true;
 
+		// delete this
+		doneOnce = false;
 
 		// set default values
 		whichButton = -1;
@@ -220,7 +222,7 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	// Perform Mouse Picking -1 if no match
 	int clicked = mousePicker->click(currX, currY, &camera);
 	bvh->activeJoint = clicked;
-	
+
 	// So we can see the newly highlighted joint
 	updateGL();
 	} // RenderWidget::mousePressEvent()
@@ -251,14 +253,36 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *event)
 		if(yAxis == false){ mouseMove.y = 0; }
 		if(zAxis == false){ mouseMove.z = 0; }
 
-		std::cout << "" << '\n';
-		for(int i = 0; i < 3; i++)
-		{
-			std::cout << mouseMove[i] << "  ";
-		}
-		std::cout << "" << '\n';
 
 		bvh->MoveJoint(mousePicker->closest, mouseMove, 1);
+
+		// if(doneOnce != true)
+		// {
+		//
+		// 	std::cout << "Mouse Movement" << '\n';
+		// 	for(int i = 0; i < 3; i++)
+		// 	{
+		// 		std::cout << mouseMove[i] << "  ";
+		// 	}
+		// 	// global positoin before
+		// 	std::cout << "Global Positoin" << '\n';
+		// 	std::cout << bvh->joints[22]->name << '\n';
+		// 	std::cout << bvh->globalPositions[22*3] << " " << bvh->globalPositions[22*3 + 1] << " " << bvh->globalPositions[22*3 + 2] << '\n';
+		//
+		// 	// move one joint
+		// 	bvh->MoveJoint(mousePicker->closest, mouseMove, 1);
+		//
+		//
+		// 	doneOnce = true;
+		// }
+		// else
+		// {
+		// 	std::cout << "Global Positoin After" << '\n';
+		// 	std::cout << bvh->joints[22]->name << '\n';
+		// 	std::cout << bvh->globalPositions[22*3] << " " << bvh->globalPositions[22*3 + 1] << " " << bvh->globalPositions[22*3 + 2] << '\n';
+		//
+		// }
+
 		// TODO
 		paintGL();
 		updateGL();

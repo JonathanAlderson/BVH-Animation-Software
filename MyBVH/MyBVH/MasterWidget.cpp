@@ -25,6 +25,8 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
 
     // default value
     shiftHeld = false;
+    renderWidget->dwn = false;
+    renderWidget->upp = false;
 
     // GUI Layout
 
@@ -199,7 +201,6 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
         else         { renderWidget->xAxis = false; renderWidget->yAxis = false; renderWidget->zAxis = true; }
         break;
       case Qt::Key_Shift:
-        std::cout << "SHIFT" << '\n';
         shiftHeld = true;
         break;
   }
@@ -241,8 +242,9 @@ void MasterWidget::keyReleaseEvent(QKeyEvent* event)
 
     // bool for rotation and movement locking
     case Qt::Key_Shift:
-      std::cout << "NOT SHIFT" << '\n';
       shiftHeld = false;
+      renderWidget->upp = false;
+      renderWidget->dwn = false;
       break;
   }
 

@@ -151,6 +151,12 @@ public:
   double interval;
   double * motion;
 
+  // Eigen Matricies
+  Eigen::Vector3d v;      // start - end
+  Eigen::MatrixXd jaco;   // jacobian
+  Eigen::MatrixXd jacoT;  // jacobian transpose
+  Eigen::MatrixXd psJaco; // psuedoinverse
+
 public:
 
   // calculates the new global positions at every frame
