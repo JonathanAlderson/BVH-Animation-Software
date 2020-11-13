@@ -152,10 +152,10 @@ public:
   double * motion;
 
   // Eigen Matricies
-  Eigen::Vector3d v;      // start - end
-  Eigen::MatrixXd jaco;   // jacobian
-  Eigen::MatrixXd jacoT;  // jacobian transpose
-  Eigen::MatrixXd psJaco; // psuedoinverse
+  // Eigen::Vector3d v;      // start - end
+  // Eigen::MatrixXd jaco;   // jacobian
+  // Eigen::MatrixXd jacoT;  // jacobian transposse
+  // Eigen::MatrixXd psJaco; // psuedoinverse
 
 public:
 

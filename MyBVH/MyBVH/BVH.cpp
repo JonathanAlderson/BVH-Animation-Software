@@ -456,12 +456,16 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     glm::vec3 p2 = {p1.x + move.x         , p1.y + move.y         , p1.z + move.z        };
     //double t[3] = {pos[0] + move.x, pos[1] + move.y, pos[2] + move.z};
 
-    std::cout << "Start" << '\n';
-    std::cout << p1.x << " " << p1.y << " " << p1.z << '\n';
-    // std::cout << p2.x << " " << p2.y << " " << p2.z << '\n';
+  //  std::cout << "Start" << '\n';
+    //std::cout << p1.x << " " << p1.y << " " << p1.z << '\n';
+    //std::cout << p2.x << " " << p2.y << " " << p2.z << '\n';
+    //std::cout << move.x << "  " << move.y << "  " << move.z << '\n';
+    std::cout << "" << '\n';
 
     // create jacobian matrix
     int l = jointAngles.size();
+
+    //std::cout << "L: " << l << '\n';
 
     double jacobian[3][l];
 
@@ -478,7 +482,7 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     ///////////////////
     // derive Jacobian
     //////////////////
-    float dSigma = .01;
+    float dSigma = .001;
 
 
     // find list of parents
@@ -513,13 +517,13 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
       // can't have more than 3
       numChannels = std::min(numChannels, 3);
 
-      std::cout << "\n\n\n\n\n\n" <<  fwdK[cParent]->name << '\n';
+      //std::cout << "\n\n\n\n\n\n" <<  fwdK[cParent]->name << '\n';
 
       // for every rotation this joint has
       for(int thisAction = 0; thisAction < numChannels; thisAction++)
       {
 
-        std::cout << "\n       This action: " << thisAction << " index: " << fwdK[cParent]->channels[thisAction]->index << '\n';
+        //std::cout << "\n       This action: " << thisAction << " index: " << fwdK[cParent]->channels[thisAction]->index << '\n';
 
 
         // reset global postion
@@ -565,14 +569,6 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
         // forward kinematics on matrix chain
         for(int i = 0; i < matrixChain.size(); i++)
         {
-          for(int a = 0; a < 4; a++)
-          {
-            for(int b = 0; b < 4; b++)
-            {
-              //std::cout << matrixChain[i][a][b] << "    ";
-            }
-            //std::cout << "" << '\n';
-          }
 
           //std::cout << "\n\n                   " << i << ": " << cPos.x << "  " << cPos.y << "  " << cPos.z << '\n';
           cPos = matrixChain[i] * cPos;
@@ -594,38 +590,74 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
 
         //exit(0);
 
-        p2 = cPos;
+        //p2 = cPos;
 
-        glm::vec3 change = (p2 - p1);
+        glm::vec3 change = (glm::vec3(cPos.x, cPos.y, cPos.z) - p1);
 
-        // set the value in the jacobian
-        jacobian[0][fwdK[cParent]->channels[thisAction]->index] = change.x / dSigma;
-        jacobian[1][fwdK[cParent]->channels[thisAction]->index] = change.y / dSigma;
-        jacobian[2][fwdK[cParent]->channels[thisAction]->index] = change.z / dSigma;
+        //std::cout << fwdK[cParent]->name << '\n';
+        //std::cout << change.x << "  " << change.y << "  " << change.z << '\n';
+
+        // Now loop over all the channels the Joint has
+        // we must find the X, Y, and Z components
+        // to find the correct index
+
+        // making sure to subtract 3 as we do not care
+        // about Root Positon.
+
+        int chnIdx = fwdK[cParent]->channels[thisAction]->index - 3;
+
+        if(chnIdx < 0){ chnIdx += 3; } // this only happends on the root joint
+
+        for(int c = 0; c < fwdK[cParent]->channels.size(); c++)
+        {
+          switch(fwdK[cParent]->channels[c]->type)
+          {
+            case(X_ROTATION):
+              jacobian[0][chnIdx] = change.x / dSigma;
+              break;
+            case(Y_ROTATION):
+              jacobian[1][chnIdx] = change.y / dSigma;
+              break;
+            case(Z_ROTATION):
+              jacobian[2][chnIdx] = change.z / dSigma;
+              break;
+          }
+        }
       }
+      //exit(0);
     }
 
     /////////////////////////
     // Solve Jacobian
     ////////////////////////
+    //std::cout << "\n\n\n\n\n\n\nJacobian" << '\n';
 
     // V matrix
-    //Eigen::Vector3d v;
-    //v[0] = (double)(p2.x - p1.x);
-    //v[1] = (double)(p2.y - p1.y);
-    //v[2] = (double)(p2.z - p1.z);
+    Eigen::Vector3d v;
+    v[0] = (double)(p2.x - p1.x);
+    v[1] = (double)(p2.y - p1.y);
+    v[2] = (double)(p2.z - p1.z);
+
+    //std::cout << p1.x << " " << p1.y << " " << p1.z << '\n';
+    //std::cout << p2.x << " " << p2.y << " " << p2.z << '\n';
+
+    //std::cout << "V: " << '\n';
+
+    //std::cout << v[0] << '\n';
+    //std::cout << v[1] << '\n';
+    //std::cout << v[2] << '\n';
 
 
-    //Eigen::MatrixXd jaco(3, l);
-
+    Eigen::MatrixXd jaco(3, l);
     // copy values in
     for(int i = 0; i < 3; i++)
     {
       for(int j = 0; j < l; j++)
       {
+        //std::cout << i << " " << j << '\n';
         //std::cout << jacobian[i][j] << std::endl;
-        std::cout << jacobian[i][j] << '\n';
-        //jaco.row(i)[j] = (double)jacobian[i][j]; // set to 0.
+        //std::cout << jacobian[i][j] << '\n';
+        jaco.row(i)[j] = (double)jacobian[i][j]; // set to 0.
 
         //jaco << (double)jacobian[i][j]; // set to 0.
         //jaco(i, j) = (double)jacobian[i][j];
@@ -635,7 +667,6 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
       }
       //std::cout << "" << '\n';
     }
-    std::cout << "Done" << '\n';
     //
     // std::cout << "Jacobian" << '\n';
     // for(int i = 0; i < 3; i++)
@@ -648,80 +679,101 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
     // }
 
     // J transpose
-    //Eigen::MatrixXd jacoT = jaco.transpose();
+    Eigen::MatrixXd jacoT = jaco.transpose();
 
     // std::cout << "\n\n\nJacobian Transpose" << '\n';
     // for(int j = 0; j < l; j++)
     // {
     //   for(int i = 0; i < 3; i++)
     //   {
-    //     std::cout << "I : " << i << "  J : " << j << std::endl;
-    //     //std::cout <<  jacoT.row(j)[i] << " ";
+    //     std::cout <<  jacoT.row(j)[i] << " ";
     //   }
     //   std::cout << "" << std::endl;
     // }
 
     //
-    // // (J * J Transpose)^-1
-    // Eigen::MatrixXd psJaco = (jaco * jacoT);
-    // //psJaco = psJaco.inverse();
-    // // psJaco = jacoT * psJaco;
-    // //
-    // // // psJaco * V = delta
-    // // Eigen::MatrixXd deltaM = psJaco * v;
+    // (J * J Transpose)^-1
+    Eigen::MatrixXd psJaco = (jaco * jacoT);
+    psJaco = psJaco.inverse();
+    psJaco = jacoT * psJaco;
+
+    // psJaco * V = delta
+    Eigen::MatrixXd deltaM = psJaco * v;
     //
     //
     // std::cout << "\n\n\nJacobian Other" << '\n';
     // for(int j = 0; j < l; j++)
     // {
-    //   for(int i = 0; i < l; i++)
+    //   for(int i = 0; i < 3; i++)
     //   {
     //     std::cout <<  psJaco.row(j)[i] << " ";
     //   }
     //   std::cout << "" << std::endl;
     // }
     //
-    // std::cout << "Done" << '\n';
+    // std::cout << "\n\n\nV" << '\n';
+    // for(int j = 0; j < 3; j++)
+    // {
+    //   std::cout <<  v.row(j)[0] << " ";
+    //
+    //   std::cout << "" << std::endl;
+    // }
+    //
+    // std::cout << "\n\n\nDelta M" << '\n';
+    // for(int j = 0; j < l; j++)
+    // {
+    //   std::cout <<  deltaM.row(j)[0] << " ";
+    //   std::cout << "" << std::endl;
+    // }
+
+    //std::cout << "Done" << '\n';
 
      //////////////////////////
     // // APPLY CHANGES
     // /////////////////////////
-    // vector<Channel *> chn;
-    // float change;
-    //
-    // int jointIndex;
-    //
-    // // step through delta M
-    // for(int i = 0; i < deltaM.size(); i+= 3)
-    // {
-    //
-    //   // the index of the joint this item relates to
-    //   jointIndex = channels[i]->joint->index;
-    //
-    //   // iterate through this joints channels
-    //   chn = joints[jointIndex]->channels;
-    //
-    //
-    //   for(int j = 0; j < chn.size(); j++)
-    //   {
-    //     if(chn[j]->type == 0) // X
-    //     {
-    //       //if(deltaM(i, 0) != 0.){ std::cout << "Name: " << joints[jointIndex]->name << std::endl; std::cout << " x " << deltaM(i, 0)  << "\n\n" << std::endl;}
-    //       joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i, 0);  // X ROTATION
-    //     }
-    //     if(chn[j]->type == 1) // Y
-    //     {
-    //       //if(deltaM(i + 1, 0) != 0.){ std::cout << "Name: " <<  joints[jointIndex]->name << std::endl; std::cout << " y " << deltaM(i + 1, 0) << "\n\n" << std::endl;}
-    //       joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i + 1, 0); // Y ROTATION
-    //     }
-    //     if(chn[j]->type == 2) // Z
-    //     {
-    //       //if(deltaM(i +2, 0) != 0.){ std::cout << "Name: " <<  joints[jointIndex]->name << std::endl; std::cout << " z " << deltaM(i + 2, 0)<< "\n\n" << std::endl;}
-    //       joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i + 2, 0); // Z ROTATION
-    //     }
-    //   }
-    //   //std::cout << "" << '\n';
-    // }
+    vector<Channel *> chn;
+    float change;
+
+    int jointIndex;
+
+    //std::cout << "APPLY CHANGES" << '\n';
+
+    // step through delta M
+    for(int i = 0; i < deltaM.size(); i+= 3)
+    {
+
+      // the index of the joint this item relates to
+      jointIndex = channels[i + 3]->joint->index;
+
+      //std::cout << "JI: " << jointIndex << '\n';
+      //std::cout << "NM: " << channels[i + 3]->joint->name << '\n';
+
+      // iterate through this joints channels
+      chn = joints[jointIndex]->channels;
+
+      //std::cout << deltaM(i, 0) << '\n';
+
+      for(int j = 0; j < chn.size(); j++)
+      {
+        if(chn[j]->type == X_ROTATION) // X
+        {
+          if(deltaM(i, 0) != 0.){ std::cout << "Name: " << joints[jointIndex]->name << std::endl; std::cout << " x " << deltaM(i, 0) << "   idx: " << chn[j]->index << "\n\n" << std::endl;}
+          joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i, 0);  // X ROTATION
+        }
+        if(chn[j]->type == Y_ROTATION) // Y
+        {
+          if(deltaM(i + 1, 0) != 0.){ std::cout << "Name: " <<  joints[jointIndex]->name << std::endl; std::cout << " y " << deltaM(i + 1, 0) << "   idx: " << chn[j]->index << "\n\n" << std::endl;}
+          joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i + 1, 0); // Y ROTATION
+        }
+        if(chn[j]->type == Z_ROTATION) // Z
+        {
+          if(deltaM(i +2, 0) != 0.){ std::cout << "Name: " <<  joints[jointIndex]->name << std::endl; std::cout << " z " << deltaM(i + 2, 0) << "   idx: " << chn[j]->index << "\n\n" << std::endl;}
+          joints[jointIndex]->dataStart[chn[j]->index] += deltaM(i + 2, 0); // Z ROTATION
+        }
+      }
+      //std::cout << "" << '\n';
+    }
+    //exit(0);
 
   }
 
