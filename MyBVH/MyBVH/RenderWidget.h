@@ -122,10 +122,8 @@ class RenderWidget : public QGLWidget
 	// gui controls
 	public slots:
 		void loadButtonPressed();
+		void saveButtonPressed();
 		void timerUpdate();
-
-
-
 
 	}; // class RenderWidget
 

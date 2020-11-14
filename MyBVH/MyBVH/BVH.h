@@ -148,8 +148,13 @@ public:
 
   // for playback
   int numFrame;
+  int cFrame;
   double interval;
   double * motion;
+  std::vector<int> keyframes;
+
+  // for saving loading
+  std::string fileContents;
 
   // Eigen Matricies
   // Eigen::Vector3d v;      // start - end
@@ -178,6 +183,21 @@ public:
 
   // moves a specific joint with inverse kinematics
   void MoveJoint(int id, glm::vec3 move, int mode);
+
+  // saves the animation
+  void SaveFile(std::string fileName);
+
+  // adds a new key frame that can be interpolated between
+  void AddKeyFrame(int advance);
+
+  // makes the current frame a keyframe
+  void SetKeyFrame();
+
+  // simple lerp between two floats
+  double Lerp(double a, double b, double c);
+
+  // updates all the lerps between keyframes
+  void LerpKeyframes();
 
 };
 

@@ -31,40 +31,58 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     // GUI Layout
 
     // Save/Load
-    QGroupBox *saveLoadGroup = new QGroupBox(tr("Save/Load"));
-    QPushButton *loadButton = new QPushButton("Load", this);
-    QVBoxLayout *saveLoadLayout = new QVBoxLayout;
+    QGroupBox   *saveLoadGroup     = new QGroupBox(tr("Save/Load"));
+    QPushButton *loadButton        = new QPushButton("Load", this);
+    QPushButton *saveButton        = new QPushButton("Save", this);
+    QLabel      *addFramesLabel    = new QLabel(tr("Frames: "));
+                 addFramesSpinBox  = new QSpinBox;
+    QPushButton *newKeyframeButton = new QPushButton("New Keyframe", this);
+    QPushButton *setKeyframeButton = new QPushButton("Set Keyframe", this);
+    QVBoxLayout *saveLoadLayout    = new QVBoxLayout;
+
+    addFramesSpinBox->setRange(0, 1000);
+    addFramesSpinBox->setSingleStep(1);
+    addFramesSpinBox->setValue(30);
+
     saveLoadLayout->addWidget(loadButton);
-    saveLoadGroup->setLayout(saveLoadLayout);
+    saveLoadLayout->addWidget(saveButton);
+    saveLoadLayout->addWidget(addFramesLabel);
+    saveLoadLayout->addWidget(addFramesSpinBox);
+    saveLoadLayout->addWidget(newKeyframeButton);
+    saveLoadLayout->addWidget(setKeyframeButton);
+    saveLoadGroup ->setLayout(saveLoadLayout);
+
 
     // playback
-    QGroupBox *playbackGroup = new QGroupBox(tr("Playback"));
+    QGroupBox   *playbackGroup       = new QGroupBox(tr("Playback"));
     QVBoxLayout *playbackGroupLayout = new QVBoxLayout;
-    playbackSpeedLabel = new QLabel(this);
-    playbackSpeedLabel->setText("Playback Speed: 1x");
-    currentFrameLabel = new QLabel(this);
-    currentFrameLabel->setText("Current Frame: 1");
+
+    playbackSpeedLabel  = new QLabel(this);
+    currentFrameLabel   = new QLabel(this);
     axisConstraintLabel = new QLabel(this);
+    playbackSpeedLabel ->setText("Playback Speed: 1x");
+    currentFrameLabel  ->setText("Current Frame: 1");
     axisConstraintLabel->setText("X: True\nY: True\nZ: True");
 
     playbackGroupLayout->addWidget(playbackSpeedLabel);
     playbackGroupLayout->addWidget(currentFrameLabel);
     playbackGroupLayout->addWidget(axisConstraintLabel);
-    playbackGroup->setLayout(playbackGroupLayout);
+    playbackGroup      ->setLayout(playbackGroupLayout);
 
 
     // play, pause, stop, etc.
-    QGroupBox *playbackButtonsGroup = new QGroupBox(tr("Playback Buttons"));
+    QGroupBox   *playbackButtonsGroup  = new QGroupBox(tr("Playback Buttons"));
     QHBoxLayout *playbackButtonsLayout = new QHBoxLayout;
-    QPushButton *rewindButton = new QPushButton;
-    rewindButton->setIcon(QIcon("../icons/rewind.png"));
-    QPushButton *stopButton = new QPushButton;
-    stopButton->setIcon(QIcon("../icons/stop.png"));
-    QPushButton *playButton = new QPushButton;
-    playButton->setIcon(QIcon("../icons/play.png"));
-    QPushButton *pauseButton = new QPushButton;
-    pauseButton->setIcon(QIcon("../icons/pause.png"));
-    QPushButton *fastForwardButton = new QPushButton;
+    QPushButton *rewindButton          = new QPushButton;
+    QPushButton *stopButton            = new QPushButton;
+    QPushButton *playButton            = new QPushButton;
+    QPushButton *pauseButton           = new QPushButton;
+    QPushButton *fastForwardButton     = new QPushButton;
+
+    rewindButton     ->setIcon(QIcon("../icons/rewind.png"));
+    stopButton       ->setIcon(QIcon("../icons/stop.png"));
+    playButton       ->setIcon(QIcon("../icons/play.png"));
+    pauseButton      ->setIcon(QIcon("../icons/pause.png"));
     fastForwardButton->setIcon(QIcon("../icons/fastforward.png"));
 
     playbackButtonsLayout->addWidget(rewindButton);
@@ -72,24 +90,26 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     playbackButtonsLayout->addWidget(playButton);
     playbackButtonsLayout->addWidget(pauseButton);
     playbackButtonsLayout->addWidget(fastForwardButton);
-    playbackButtonsGroup->setLayout(playbackButtonsLayout);
+    playbackButtonsGroup ->setLayout(playbackButtonsLayout);
 
     // all ui group
-    QGroupBox *allUI = new QGroupBox("Options");
+    QGroupBox   *allUI       = new QGroupBox("Options");
     QVBoxLayout *allUILayout = new QVBoxLayout;
+
     allUILayout->addWidget(saveLoadGroup);
     allUILayout->addWidget(playbackGroup);
     allUILayout->addWidget(playbackButtonsGroup);
-    allUI->setLayout(allUILayout);
-    allUI->setMaximumWidth(300);
+    allUI      ->setLayout(allUILayout);
+    allUI      ->setMaximumWidth(300);
 
     // render box group
-    QGroupBox *renderGroup = new QGroupBox("Render");
+    QGroupBox   *renderGroup       = new QGroupBox("Render");
     QVBoxLayout *renderGroupLayout = new QVBoxLayout;
+
     renderGroupLayout->addWidget(renderWidget);
-    renderGroup->setLayout(renderGroupLayout);
-    renderGroup->setMinimumWidth(600);
-    renderGroup->setMinimumHeight(600);
+    renderGroup      ->setLayout(renderGroupLayout);
+    renderGroup      ->setMinimumWidth(600);
+    renderGroup      ->setMinimumHeight(600);
 
     // Master layout
     QGridLayout *mainLayout = new QGridLayout;
@@ -101,10 +121,10 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     setWindowTitle(tr("BVH Editor"));
 
     // Keyboard Shortcuts
-    QShortcut *playShortcut = new QShortcut(QKeySequence("space"), this);
-    QShortcut *stopShortcut = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
+    QShortcut *playShortcut        = new QShortcut(QKeySequence("space"), this);
+    QShortcut *stopShortcut        = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
     QShortcut *fastForwardShortcut = new QShortcut(QKeySequence("Shift+."), this);
-    QShortcut *rewindShortcut = new QShortcut(QKeySequence("Shift+,"), this);
+    QShortcut *rewindShortcut      = new QShortcut(QKeySequence("Shift+,"), this);
     QObject::connect(playShortcut, SIGNAL(activated()), this, SLOT(playPause()));
     QObject::connect(stopShortcut, SIGNAL(activated()), this, SLOT(stop()));
     QObject::connect(fastForwardShortcut, SIGNAL(activated()), this, SLOT(fastForward()));
@@ -112,6 +132,9 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
 
     // Connecting
     connect(loadButton, SIGNAL(pressed()), renderWidget, SLOT(loadButtonPressed()));
+    connect(saveButton, SIGNAL(pressed()), renderWidget, SLOT(saveButtonPressed()));
+    connect(newKeyframeButton, SIGNAL(pressed()), this, SLOT(addKeyframe()));
+    connect(setKeyframeButton, SIGNAL(pressed()), this, SLOT(setKeyframe()));
     connect(rewindButton, SIGNAL(pressed()), this, SLOT(rewind()));
     connect(stopButton, SIGNAL(pressed()), this, SLOT(stop()));
     connect(playButton, SIGNAL(pressed()), this, SLOT(play()));
@@ -181,7 +204,7 @@ void MasterWidget::keyPressEvent(QKeyEvent* event)
     case Qt::Key_E:
       if(renderWidget->paused == true)
       {
-        if(renderWidget->cFrame < renderWidget->bvh->numFrame ){ renderWidget->cFrame += 1; renderWidget->cTime += renderWidget->bvh->interval * 1000; }
+        if(renderWidget->cFrame < renderWidget->bvh->numFrame-1 ){ renderWidget->cFrame += 1; renderWidget->cTime += renderWidget->bvh->interval * 1000; }
         renderWidget->updateGL();
       }
       break;
@@ -321,7 +344,7 @@ void MasterWidget::playPause()
 void MasterWidget::stop()
 {
  renderWidget->paused = true;
- renderWidget->cFrame = 16.;
+ renderWidget->cFrame = 0.;
  renderWidget->cTime = 0;
  renderWidget->playbackSpeed = 1.;
  renderWidget->updateGL();
@@ -341,7 +364,21 @@ void MasterWidget::updateText(int frameNo, float playbackSpeed)
   // can't convert to 2dp
   string playback = "Playback Speed: " + std::to_string((float)((int)(playbackSpeed * 100.)) / 100.) + "x";
 
-  currentFrameLabel->setText(QString::fromStdString("Current Frame: " + std::to_string(frameNo)));
+  currentFrameLabel->setText(QString::fromStdString("Current Frame: " + std::to_string(frameNo + 1)));
   playbackSpeedLabel->setText(QString::fromStdString(playback));
   axisConstraintLabel->setText(QString::fromStdString(axis));
+}
+
+// adds a new keyframe to the animation
+void MasterWidget::addKeyframe()
+{
+  int newFrames = addFramesSpinBox->value();
+  renderWidget->bvh->AddKeyFrame(newFrames);
+  renderWidget->cFrame += newFrames;
+}
+
+// sets the current frame to be a keyframe
+void MasterWidget::setKeyframe()
+{
+  renderWidget->bvh->SetKeyFrame();
 }

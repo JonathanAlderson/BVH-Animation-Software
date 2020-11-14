@@ -94,6 +94,27 @@ void  BVH::Load( const char * bvhFileName )
 	// Just make sure everything is reset
 	Clear();
 
+  ///////////////////////////////
+  // FIRST READ
+  //////////////////////////////
+  // first we read the file in for saving purposes later
+  file.open( bvhFileName, ios::in );
+  std::vector<char> charVec;
+	if ( file.is_open() == 0 )  return; // can't be opened for whatever reason
+	while ( ! file.eof() )
+  {
+    file.getline( line, BUFFER_LENGTH );
+    if(strcmp(line,"MOTION\r") == 0){ break; }
+
+    for(int i = 0; i < strlen(line); i++)
+    {
+      charVec.push_back(line[i]);
+    }
+    charVec.push_back('\n');
+
+  }
+  file.close();
+  fileContents = std::string(charVec.begin(), charVec.end());
 
 	// finds the motion name from the file name
   // with a bunch of char * operations
@@ -419,7 +440,7 @@ void BVH::FindGlobalPosition(Joint *joint, Camera *camera)
 
 void BVH::MoveJoint(int id, glm::vec3 move, int mode)
 {
-  //mode = ROTATE;
+  mode = ROTATE;
   //std::cout << "Move" << '\n';
   //std::cout << move.x << " " << move.y << " " << move.z << '\n';
 
@@ -789,6 +810,8 @@ void BVH::MoveJoint(int id, glm::vec3 move, int mode)
 // will go to the recursive method
 void  BVH::RenderFigure( int frameNo, float scale, Camera *camera)
 {
+  // save the current frame
+  cFrame = frameNo;
 	// Calculate poistion into array to start based on frame
 	RenderFigure( joints[ 0 ], motion + frameNo * numChannel, scale, camera );
 }
@@ -1069,4 +1092,190 @@ void BVH::RenderControlPoints()
 
   // set the colour to white
   glColor3f(1., 1., 1.);
+}
+
+void BVH::AddKeyFrame(int advance)
+{
+  std::cout << "Adding keyframe" << '\n';
+
+  // put the current frame into the keyframes list
+  if (std::find(keyframes.begin(), keyframes.end(), cFrame) == keyframes.end()){ keyframes.push_back(cFrame); }
+
+  // put the final frame in the keyframes list
+  if (std::find(keyframes.begin(), keyframes.end(), cFrame + advance) == keyframes.end()){ keyframes.push_back(cFrame + advance); }
+
+  std::cout << "Keyframes" << '\n';
+
+  for(int i = 0; i < keyframes.size(); i++)
+  {
+    std::cout << "Keyfarmes: " << keyframes[i] << '\n';
+  }
+
+  // find the start point of the data that needs to be changed
+  double *start = motion + (cFrame * numChannel);
+
+  // copy the data that can be unchanged
+  double *end = motion + ((cFrame + advance) * numChannel);
+
+
+  std::cout << "Start: " << start << '\n';
+  std::cout << "Start: " << cFrame * numChannel << '\n';
+  std::cout << "End: " << end << '\n';
+  std::cout << "End: " << (cFrame + advance) * numChannel << '\n';
+
+  // find the values we want to copy every frame
+  double *kFrame = new double[numChannel];
+
+  for(int i = 0; i < numChannel; i++)
+  {
+    kFrame[i] = start[i];
+  }
+
+
+  // malloc for the correct amount
+  double *newMotion = new double[numChannel * (numFrame + advance)];
+  int idx = 0; // keeps track of how much writing
+
+  // insert values before the update
+  for(int i = 0; i < ((cFrame + 1) * numChannel); i++)
+  {
+    //std::cout << "B4: " << i << '\n';
+    newMotion[idx] = motion[i];
+    idx++;
+  }
+
+  // repeatedly copy in the keyframe
+  for(int i = 0; i < (advance * numChannel); i++)
+  {
+    //std::cout << "NU: " << i << '\n';
+    newMotion[idx] = kFrame[i % numChannel];
+    idx++;
+  }
+
+  // reinsert the values for the end frames that are unchanged
+  //std::cout << "After: " << cFrame+1 << " to " << numFrame << '\n';
+  for(int i = ((cFrame+1) * numChannel); i < (numFrame * numChannel); i++)
+  {
+    //std::cout << "AT: " << i << '\n';
+    newMotion[idx] = motion[i];
+    idx++;
+  }
+
+  // reassign and delete
+  delete[] motion;
+  motion = newMotion;
+
+  // update num frames
+  numFrame += advance;
+
+  std::cout << "\n\nNumFrame: " << numFrame << '\n';
+
+}
+
+void BVH::SetKeyFrame()
+{
+  std::cout << "Set An Extra KeyFrame" << '\n';
+  // put the current frame into the keyframes list
+  if (std::find(keyframes.begin(), keyframes.end(), cFrame) == keyframes.end()){ keyframes.push_back(cFrame); }
+
+  LerpKeyframes();
+}
+
+
+double BVH::Lerp(double a, double b, double c)
+{
+  return((1. - c) * a + c * b);
+}
+
+// updates all the lerps between keyframes
+void BVH::LerpKeyframes()
+{
+  std::cout << "Lerping Keyframes" << '\n';
+
+  // sort all our keyframes
+  std::sort (keyframes.begin(), keyframes.end());
+
+  // frame indexes into data
+  int startI;
+  int endI;
+
+  // frame numbers
+  int startFrame;
+  int endFrame;
+
+  // contains frame data
+  double startF[numChannel];
+  double endF[numChannel];
+
+  // iterate and interpolate between keyframes
+  for(int k = 0; k < keyframes.size() - 1; k++)
+  {
+    // find the first and second index
+    startI = keyframes[k] * numChannel;
+    endI = keyframes[k+1] * numChannel;
+
+    // find start and end frame
+    startFrame = keyframes[k];
+    endFrame = keyframes[k+1];
+
+    std::cout << "Start: " << startFrame << '\n';
+    std::cout << "End: " << endFrame << "\n\n "<< '\n';
+
+    startF[numChannel];
+    endF[numChannel];
+
+    // load values
+    for(int i = 0; i < numChannel; i++)
+    {
+      startF[i] = motion[startI + i];
+      endF[i] = motion[endI + i];
+
+      // std::cout << "Start " << i << " "<< startF[i] << '\n';
+      // std::cout << "End   " << i << " "<< endF[i] << '\n';
+    }
+
+    // perform lerp on data
+
+    // how much lerp is happending
+    double progress = 0.;
+
+    // for every frame we need to animate between
+    for(int i = startFrame; i < endFrame; i++)
+    {
+      progress = (double)(i - startFrame) / (double)(endFrame - startFrame);
+
+      std::cout << "  Progress: " << progress << '\n';
+
+      // for every channel
+      for(int c = 0; c < numChannel; c++)
+      {
+        motion[(i * numChannel) + c] = Lerp(startF[c], endF[c], progress);
+        std::cout << "       Writing: " << (i * numChannel) + c << "   " << Lerp(startF[c], endF[c], progress) << '\n';
+      }
+    }
+
+  }
+
+
+
+}
+
+void BVH::SaveFile(std::string fileName)
+{
+  ofstream  file;
+  file.open(fileName);
+
+  file << fileContents;
+  file << "MOTION\nFrames: ";
+  file << to_string(numFrame);
+  file << "\nFrame Time: ";
+  file << to_string(interval);
+  file << "\n";
+
+  for(int i = 0; i < (numFrame * numChannel); i++)
+  {
+    file << to_string(motion[i]);
+    file << " ";
+  }
+  std::cout << "Saved File" << '\n';
 }

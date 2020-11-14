@@ -163,6 +163,9 @@ void RenderWidget::paintGL()
 	// apply translation for interface control
 	glLoadIdentity();
 
+	// stop Qt stealing focus
+	this->setFocus();
+
 
 
 
@@ -345,12 +348,22 @@ void RenderWidget::loadButtonPressed()
 
 		// TODO
 		// reset the camera here
-
 		updateGL();
 		paintGL();
-
 	}
 }
+
+void RenderWidget::saveButtonPressed()
+{
+
+  QString fileName = QFileDialog::getSaveFileName(this,
+                     tr("Save .bvh File"), tr(".bvh"),
+                     tr("BVH (*.bvh)"));
+  std::cout << "fileName: " << fileName.toStdString() << '\n';
+
+  bvh->SaveFile(fileName.toStdString());
+}
+
 
 // Update the timer and calculate the current frame of animation
 void RenderWidget::timerUpdate()

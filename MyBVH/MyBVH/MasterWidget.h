@@ -32,7 +32,6 @@
 #include <QWheelEvent>
 #include <QCoreApplication>
 
-
 class RenderWidget;
 
 class MasterWidget : public QWidget
@@ -60,6 +59,8 @@ private:
     QLabel *playbackSpeedLabel;
     QLabel *axisConstraintLabel;
 
+    QSpinBox *addFramesSpinBox;
+
     bool shiftHeld;
 
 // playback controls
@@ -71,6 +72,8 @@ public slots:
   void stop();
   void playPause();
   void updateText(int frameNo, float playbackSpeed);
+  void addKeyframe();
+  void setKeyframe();
 
 };
 
