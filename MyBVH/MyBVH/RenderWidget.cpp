@@ -195,11 +195,11 @@ void RenderWidget::paintGL()
 	// Render Skeleton At Current Frame
 	bvh->RenderFigure(cFrame, 1.0, &camera);
 
-
 	glTranslatef(xTrans, yTrans, -(zTrans - 25.));
 
 	// render the control points
 	bvh->RenderControlPoints();
+
 
 	} // RenderWidget::paintGL()
 
@@ -224,7 +224,26 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 
 	// Perform Mouse Picking -1 if no match
 	int clicked = mousePicker->click(currX, currY, &camera);
-	bvh->activeJoint = clicked;
+
+  // if clicked on nothign clear list
+	if(clicked == -1)
+	{
+		bvh->activeJoints.clear();
+	}
+	else
+	{
+		if(parentWidget->shiftHeld)
+		{
+			std::cout << "Shift Helf" << '\n';
+			bvh->activeJoints.push_back(clicked);
+		}
+		else
+		{
+			std::cout << "Shift Not Helf" << '\n';
+			bvh->activeJoints.clear();
+			bvh->activeJoints.push_back(clicked);
+		}
+	}
 
 	// So we can see the newly highlighted joint
 	updateGL();
@@ -249,7 +268,7 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *event)
 		mouseMove.y = -mouseMove.y;
 
 		// TODO make this a sensetivity
-		mouseMove *= 50.0;
+		mouseMove *= 1000.0;
 
 		// now contrain the axis based on current settings
 		if(xAxis == false){ mouseMove.x = 0; }
@@ -257,7 +276,7 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *event)
 		if(zAxis == false){ mouseMove.z = 0; }
 
 
-		bvh->MoveJoint(mousePicker->closest, mouseMove, 1);
+		bvh->MoveJoint(bvh->activeJoints[0], mouseMove);
 
 		// if(doneOnce != true)
 		// {
@@ -355,13 +374,30 @@ void RenderWidget::loadButtonPressed()
 
 void RenderWidget::saveButtonPressed()
 {
+	// if we need to start playing the animation again
+	bool reset = false;
+	// pause the animation
+	if(paused == false){ paused = true;; reset = true; }
 
+
+	// get the filename
   QString fileName = QFileDialog::getSaveFileName(this,
                      tr("Save .bvh File"), tr(".bvh"),
                      tr("BVH (*.bvh)"));
   std::cout << "fileName: " << fileName.toStdString() << '\n';
 
-  bvh->SaveFile(fileName.toStdString());
+	if(fileName.toStdString().length() > 0)
+	{
+		bvh->SaveFile(fileName.toStdString());
+	}
+
+	if(reset)
+	{
+		paused = false;
+	}
+
+
+
 }
 
 

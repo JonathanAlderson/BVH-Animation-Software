@@ -46,6 +46,8 @@ public:
 
     void wheelEvent(QWheelEvent* event); // zooms in/out
 
+    bool shiftHeld;
+
 private:
     QSlider *createSlider();
 
@@ -61,8 +63,6 @@ private:
 
     QSpinBox *addFramesSpinBox;
 
-    bool shiftHeld;
-
 // playback controls
 public slots:
 	void rewind();
@@ -74,6 +74,8 @@ public slots:
   void updateText(int frameNo, float playbackSpeed);
   void addKeyframe();
   void setKeyframe();
+  void lerpKeyframe();
+  void toggleIKButton();
 
 };
 

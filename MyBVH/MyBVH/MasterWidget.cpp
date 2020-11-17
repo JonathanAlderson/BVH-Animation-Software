@@ -36,8 +36,9 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     QPushButton *saveButton        = new QPushButton("Save", this);
     QLabel      *addFramesLabel    = new QLabel(tr("Frames: "));
                  addFramesSpinBox  = new QSpinBox;
-    QPushButton *newKeyframeButton = new QPushButton("New Keyframe", this);
+    QPushButton *newKeyframeButton = new QPushButton("Insert Keyframe", this);
     QPushButton *setKeyframeButton = new QPushButton("Set Keyframe", this);
+    QPushButton *lerpKeyframeButton = new QPushButton("Lerp Keyframes", this);
     QVBoxLayout *saveLoadLayout    = new QVBoxLayout;
 
     addFramesSpinBox->setRange(0, 1000);
@@ -50,7 +51,17 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     saveLoadLayout->addWidget(addFramesSpinBox);
     saveLoadLayout->addWidget(newKeyframeButton);
     saveLoadLayout->addWidget(setKeyframeButton);
+    saveLoadLayout->addWidget(lerpKeyframeButton);
     saveLoadGroup ->setLayout(saveLoadLayout);
+
+
+    // IK Control
+    QGroupBox   *IKGroup           = new QGroupBox(tr("IK Control"));
+    QPushButton *toggleIKButton    = new QPushButton("Toggle IK / Rotation", this);
+    QVBoxLayout *IKLayout          = new QVBoxLayout;
+
+    IKLayout->addWidget(toggleIKButton);
+    IKGroup ->setLayout(IKLayout);
 
 
     // playback
@@ -98,6 +109,7 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
 
     allUILayout->addWidget(saveLoadGroup);
     allUILayout->addWidget(playbackGroup);
+    allUILayout->addWidget(IKGroup);
     allUILayout->addWidget(playbackButtonsGroup);
     allUI      ->setLayout(allUILayout);
     allUI      ->setMaximumWidth(300);
@@ -135,6 +147,8 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     connect(saveButton, SIGNAL(pressed()), renderWidget, SLOT(saveButtonPressed()));
     connect(newKeyframeButton, SIGNAL(pressed()), this, SLOT(addKeyframe()));
     connect(setKeyframeButton, SIGNAL(pressed()), this, SLOT(setKeyframe()));
+    connect(lerpKeyframeButton, SIGNAL(pressed()), this, SLOT(lerpKeyframe()));
+    connect(toggleIKButton, SIGNAL(pressed()), this, SLOT(toggleIKButton()));
     connect(rewindButton, SIGNAL(pressed()), this, SLOT(rewind()));
     connect(stopButton, SIGNAL(pressed()), this, SLOT(stop()));
     connect(playButton, SIGNAL(pressed()), this, SLOT(play()));
@@ -347,6 +361,13 @@ void MasterWidget::stop()
  renderWidget->cFrame = 0.;
  renderWidget->cTime = 0;
  renderWidget->playbackSpeed = 1.;
+
+
+ // we also reset the axis constraints
+ renderWidget->xAxis = true;
+ renderWidget->yAxis = true;
+ renderWidget->zAxis = true;
+
  renderWidget->updateGL();
 }
 
@@ -360,6 +381,11 @@ void MasterWidget::updateText(int frameNo, float playbackSpeed)
   else                   { axis += "False\nZ: ";}
   if(renderWidget->zAxis){ axis += "True"      ;}
   else                   { axis += "False "    ;}
+
+  // also add which pose mode we are in
+  axis += "\nMode: ";
+  if(renderWidget->bvh->moveMode == 0){ axis += "Rotate"; }
+  else                                { axis += "IK"; }
 
   // can't convert to 2dp
   string playback = "Playback Speed: " + std::to_string((float)((int)(playbackSpeed * 100.)) / 100.) + "x";
@@ -381,4 +407,17 @@ void MasterWidget::addKeyframe()
 void MasterWidget::setKeyframe()
 {
   renderWidget->bvh->SetKeyFrame();
+}
+
+// sets the current frame to be a keyframe
+void MasterWidget::lerpKeyframe()
+{
+  renderWidget->bvh->LerpKeyframes();
+}
+
+// toggles between Inverse Kinematics and Rotation
+void MasterWidget::toggleIKButton()
+{
+  if(renderWidget->bvh->moveMode == 0){ renderWidget->bvh->moveMode = 1; std::cout << "1" << '\n'; }
+  else                                { renderWidget->bvh->moveMode = 0; std::cout << "0" << '\n';}
 }

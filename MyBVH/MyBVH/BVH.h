@@ -141,10 +141,11 @@ public:
 
   // for inverse kinematics
   vector<double> jointAngles;
+  int moveMode;   // how we pose
 
 
   // which item the user is controlling
-  int activeJoint;
+  vector<int> activeJoints;
 
   // for playback
   int numFrame;
@@ -181,8 +182,9 @@ public:
   // Renders the points where a user can click
   void RenderControlPoints();
 
+
   // moves a specific joint with inverse kinematics
-  void MoveJoint(int id, glm::vec3 move, int mode);
+  void MoveJoint(int id, glm::vec3 move);
 
   // saves the animation
   void SaveFile(std::string fileName);
