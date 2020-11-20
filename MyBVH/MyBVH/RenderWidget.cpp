@@ -225,6 +225,7 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	// Perform Mouse Picking -1 if no match
 	int clicked = mousePicker->click(currX, currY, &camera);
 
+	bool addToList = false;
   // if clicked on nothign clear list
 	if(clicked == -1)
 	{
@@ -234,14 +235,20 @@ void RenderWidget::mousePressEvent(QMouseEvent *event)
 	{
 		if(parentWidget->shiftHeld)
 		{
-			std::cout << "Shift Helf" << '\n';
-			bvh->activeJoints.push_back(clicked);
+			addToList = true;
 		}
 		else
 		{
-			std::cout << "Shift Not Helf" << '\n';
 			bvh->activeJoints.clear();
-			bvh->activeJoints.push_back(clicked);
+			addToList = true;
+		}
+
+		if(addToList)
+		{
+			if (std::find(bvh->activeJoints.begin(), bvh->activeJoints.end(), clicked) == bvh->activeJoints.end())
+			{
+				bvh->activeJoints.push_back(clicked);
+			}
 		}
 	}
 
@@ -276,7 +283,7 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *event)
 		if(zAxis == false){ mouseMove.z = 0; }
 
 
-		bvh->MoveJoint(bvh->activeJoints[0], mouseMove);
+		bvh->MoveJoint(mouseMove);
 
 		// if(doneOnce != true)
 		// {

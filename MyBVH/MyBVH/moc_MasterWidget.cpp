@@ -21,8 +21,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_MasterWidget_t {
-    QByteArrayData data[15];
-    char stringdata0[144];
+    QByteArrayData data[22];
+    char stringdata0[219];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -45,13 +45,22 @@ QT_MOC_LITERAL(10, 78, 13), // "playbackSpeed"
 QT_MOC_LITERAL(11, 92, 11), // "addKeyframe"
 QT_MOC_LITERAL(12, 104, 11), // "setKeyframe"
 QT_MOC_LITERAL(13, 116, 12), // "lerpKeyframe"
-QT_MOC_LITERAL(14, 129, 14) // "toggleIKButton"
+QT_MOC_LITERAL(14, 129, 8), // "toggleIK"
+QT_MOC_LITERAL(15, 138, 15), // "toggleDampening"
+QT_MOC_LITERAL(16, 154, 13), // "toggleControl"
+QT_MOC_LITERAL(17, 168, 12), // "lambdaUpdate"
+QT_MOC_LITERAL(18, 181, 1), // "i"
+QT_MOC_LITERAL(19, 183, 11), // "xGainUpdate"
+QT_MOC_LITERAL(20, 195, 11), // "yGainUpdate"
+QT_MOC_LITERAL(21, 207, 11) // "zGainUpdate"
 
     },
     "MasterWidget\0rewind\0\0fastForward\0pause\0"
     "play\0stop\0playPause\0updateText\0frameNo\0"
     "playbackSpeed\0addKeyframe\0setKeyframe\0"
-    "lerpKeyframe\0toggleIKButton"
+    "lerpKeyframe\0toggleIK\0toggleDampening\0"
+    "toggleControl\0lambdaUpdate\0i\0xGainUpdate\0"
+    "yGainUpdate\0zGainUpdate"
 };
 #undef QT_MOC_LITERAL
 
@@ -61,7 +70,7 @@ static const uint qt_meta_data_MasterWidget[] = {
        7,       // revision
        0,       // classname
        0,    0, // classinfo
-      11,   14, // methods
+      17,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -69,17 +78,23 @@ static const uint qt_meta_data_MasterWidget[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   69,    2, 0x0a /* Public */,
-       3,    0,   70,    2, 0x0a /* Public */,
-       4,    0,   71,    2, 0x0a /* Public */,
-       5,    0,   72,    2, 0x0a /* Public */,
-       6,    0,   73,    2, 0x0a /* Public */,
-       7,    0,   74,    2, 0x0a /* Public */,
-       8,    2,   75,    2, 0x0a /* Public */,
-      11,    0,   80,    2, 0x0a /* Public */,
-      12,    0,   81,    2, 0x0a /* Public */,
-      13,    0,   82,    2, 0x0a /* Public */,
-      14,    0,   83,    2, 0x0a /* Public */,
+       1,    0,   99,    2, 0x0a /* Public */,
+       3,    0,  100,    2, 0x0a /* Public */,
+       4,    0,  101,    2, 0x0a /* Public */,
+       5,    0,  102,    2, 0x0a /* Public */,
+       6,    0,  103,    2, 0x0a /* Public */,
+       7,    0,  104,    2, 0x0a /* Public */,
+       8,    2,  105,    2, 0x0a /* Public */,
+      11,    0,  110,    2, 0x0a /* Public */,
+      12,    0,  111,    2, 0x0a /* Public */,
+      13,    0,  112,    2, 0x0a /* Public */,
+      14,    0,  113,    2, 0x0a /* Public */,
+      15,    0,  114,    2, 0x0a /* Public */,
+      16,    0,  115,    2, 0x0a /* Public */,
+      17,    1,  116,    2, 0x0a /* Public */,
+      19,    1,  119,    2, 0x0a /* Public */,
+      20,    1,  122,    2, 0x0a /* Public */,
+      21,    1,  125,    2, 0x0a /* Public */,
 
  // slots: parameters
     QMetaType::Void,
@@ -93,6 +108,12 @@ static const uint qt_meta_data_MasterWidget[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void, QMetaType::Int,   18,
+    QMetaType::Void, QMetaType::Int,   18,
+    QMetaType::Void, QMetaType::Int,   18,
+    QMetaType::Void, QMetaType::Int,   18,
 
        0        // eod
 };
@@ -113,7 +134,13 @@ void MasterWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
         case 7: _t->addKeyframe(); break;
         case 8: _t->setKeyframe(); break;
         case 9: _t->lerpKeyframe(); break;
-        case 10: _t->toggleIKButton(); break;
+        case 10: _t->toggleIK(); break;
+        case 11: _t->toggleDampening(); break;
+        case 12: _t->toggleControl(); break;
+        case 13: _t->lambdaUpdate((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 14: _t->xGainUpdate((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 15: _t->yGainUpdate((*reinterpret_cast< int(*)>(_a[1]))); break;
+        case 16: _t->zGainUpdate((*reinterpret_cast< int(*)>(_a[1]))); break;
         default: ;
         }
     }
@@ -144,13 +171,13 @@ int MasterWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 11)
+        if (_id < 17)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 11;
+        _id -= 17;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 11)
+        if (_id < 17)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 11;
+        _id -= 17;
     }
     return _id;
 }

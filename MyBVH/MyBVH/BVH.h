@@ -157,11 +157,14 @@ public:
   // for saving loading
   std::string fileContents;
 
-  // Eigen Matricies
-  // Eigen::Vector3d v;      // start - end
-  // Eigen::MatrixXd jaco;   // jacobian
-  // Eigen::MatrixXd jacoT;  // jacobian transposse
-  // Eigen::MatrixXd psJaco; // psuedoinverse
+  // dampening
+  bool useDampening;
+  float lambda;
+
+  bool useControl;
+  float xGain;
+  float yGain;
+  float zGain;
 
 public:
 
@@ -184,7 +187,7 @@ public:
 
 
   // moves a specific joint with inverse kinematics
-  void MoveJoint(int id, glm::vec3 move);
+  void MoveJoint(glm::vec3 move);
 
   // saves the animation
   void SaveFile(std::string fileName);

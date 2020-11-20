@@ -31,6 +31,7 @@
 #include <QShortcut>
 #include <QWheelEvent>
 #include <QCoreApplication>
+#include <QCheckBox>
 
 class RenderWidget;
 
@@ -52,16 +53,19 @@ private:
     QSlider *createSlider();
 
     RenderWidget *renderWidget;
-
-    QPushButton *loadButton;
-
-    QTimer *timer;
-
-    QLabel *currentFrameLabel;
-    QLabel *playbackSpeedLabel;
-    QLabel *axisConstraintLabel;
-
-    QSpinBox *addFramesSpinBox;
+    QPushButton  *loadButton;
+    QTimer       *timer;
+    QLabel       *currentFrameLabel;
+    QLabel       *playbackSpeedLabel;
+    QLabel       *axisConstraintLabel;
+    QSpinBox     *addFramesSpinBox;
+    QSpinBox     *lamdbaSpinBox;
+    QSpinBox     *xGainSpinBox;
+    QSpinBox     *yGainSpinBox;
+    QSpinBox     *zGainSpinBox;
+    QCheckBox    *toggleIKCheck;
+    QCheckBox    *toggleDampeningCheck;
+    QCheckBox    *toggleControlCheck;
 
 // playback controls
 public slots:
@@ -75,7 +79,13 @@ public slots:
   void addKeyframe();
   void setKeyframe();
   void lerpKeyframe();
-  void toggleIKButton();
+  void toggleIK();
+  void toggleDampening();
+  void toggleControl();
+  void lambdaUpdate(int i);
+  void xGainUpdate(int i);
+  void yGainUpdate(int i);
+  void zGainUpdate(int i);
 
 };
 

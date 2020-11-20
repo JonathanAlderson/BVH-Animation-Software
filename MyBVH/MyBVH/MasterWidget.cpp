@@ -16,6 +16,7 @@
 
 MasterWidget::MasterWidget(char *filename, QWidget *parent)
 {
+
     // Setup the Render Widget, passing the filename
     renderWidget = new RenderWidget(filename, this);
     renderWidget->setParent(this);
@@ -56,13 +57,48 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
 
 
     // IK Control
-    QGroupBox   *IKGroup           = new QGroupBox(tr("IK Control"));
-    QPushButton *toggleIKButton    = new QPushButton("Toggle IK / Rotation", this);
-    QVBoxLayout *IKLayout          = new QVBoxLayout;
+    QGroupBox   *IKGroup              = new QGroupBox(tr("IK Control"));
+                 toggleIKCheck        = new QCheckBox();
+                 toggleDampeningCheck = new QCheckBox();
+                 toggleControlCheck   = new QCheckBox();
+                 lamdbaSpinBox        = new QSpinBox();
+    QLabel      *lambdaSpinBoxLabel   = new QLabel(tr("Lambda"));
+                 xGainSpinBox         = new QSpinBox();
+    QLabel      *xGainSpinBoxLabel    = new QLabel(tr("X Gain"));
+                 yGainSpinBox         = new QSpinBox();
+    QLabel      *yGainSpinBoxLabel    = new QLabel(tr("Y Gain"));
+                 zGainSpinBox         = new QSpinBox();
+    QLabel      *zGainSpinBoxLabel    = new QLabel(tr("Z Gain"));
+    QVBoxLayout *IKLayout             = new QVBoxLayout;
 
-    IKLayout->addWidget(toggleIKButton);
+    toggleDampeningCheck ->setText("Dampening");
+    toggleControlCheck   ->setText("Control");
+    toggleIKCheck        ->setText("Rotations");
+    lamdbaSpinBox        ->setRange(0, 1000);
+    lamdbaSpinBox        ->setSingleStep(1);
+    lamdbaSpinBox        ->setValue(1);
+    xGainSpinBox         ->setRange(0, 1000);
+    xGainSpinBox         ->setSingleStep(1);
+    xGainSpinBox         ->setValue(1);
+    yGainSpinBox         ->setRange(0, 1000);
+    yGainSpinBox         ->setSingleStep(1);
+    yGainSpinBox         ->setValue(1);
+    zGainSpinBox         ->setRange(0, 1000);
+    zGainSpinBox         ->setSingleStep(1);
+    zGainSpinBox         ->setValue(1);
+
+    IKLayout->addWidget(toggleIKCheck);
+    IKLayout->addWidget(toggleDampeningCheck);
+    IKLayout->addWidget(toggleControlCheck);
+    IKLayout->addWidget(lambdaSpinBoxLabel);
+    IKLayout->addWidget(lamdbaSpinBox);
+    IKLayout->addWidget(xGainSpinBoxLabel);
+    IKLayout->addWidget(xGainSpinBox);
+    IKLayout->addWidget(yGainSpinBoxLabel);
+    IKLayout->addWidget(yGainSpinBox);
+    IKLayout->addWidget(zGainSpinBoxLabel);
+    IKLayout->addWidget(zGainSpinBox);
     IKGroup ->setLayout(IKLayout);
-
 
     // playback
     QGroupBox   *playbackGroup       = new QGroupBox(tr("Playback"));
@@ -137,26 +173,33 @@ MasterWidget::MasterWidget(char *filename, QWidget *parent)
     QShortcut *stopShortcut        = new QShortcut(QKeySequence(Qt::Key_Backspace), this);
     QShortcut *fastForwardShortcut = new QShortcut(QKeySequence("Shift+."), this);
     QShortcut *rewindShortcut      = new QShortcut(QKeySequence("Shift+,"), this);
-    QObject::connect(playShortcut, SIGNAL(activated()), this, SLOT(playPause()));
-    QObject::connect(stopShortcut, SIGNAL(activated()), this, SLOT(stop()));
+
+    // connecting keyboard shortcuts
+    QObject::connect(playShortcut,        SIGNAL(activated()), this, SLOT(playPause()));
+    QObject::connect(stopShortcut,        SIGNAL(activated()), this, SLOT(stop()));
     QObject::connect(fastForwardShortcut, SIGNAL(activated()), this, SLOT(fastForward()));
-    QObject::connect(rewindShortcut, SIGNAL(activated()), this, SLOT(rewind()));
+    QObject::connect(rewindShortcut,      SIGNAL(activated()), this, SLOT(rewind()));
 
     // Connecting
-    connect(loadButton, SIGNAL(pressed()), renderWidget, SLOT(loadButtonPressed()));
-    connect(saveButton, SIGNAL(pressed()), renderWidget, SLOT(saveButtonPressed()));
-    connect(newKeyframeButton, SIGNAL(pressed()), this, SLOT(addKeyframe()));
-    connect(setKeyframeButton, SIGNAL(pressed()), this, SLOT(setKeyframe()));
-    connect(lerpKeyframeButton, SIGNAL(pressed()), this, SLOT(lerpKeyframe()));
-    connect(toggleIKButton, SIGNAL(pressed()), this, SLOT(toggleIKButton()));
-    connect(rewindButton, SIGNAL(pressed()), this, SLOT(rewind()));
-    connect(stopButton, SIGNAL(pressed()), this, SLOT(stop()));
-    connect(playButton, SIGNAL(pressed()), this, SLOT(play()));
-    connect(pauseButton, SIGNAL(pressed()), this, SLOT(pause()));
-    connect(fastForwardButton, SIGNAL(pressed()), this, SLOT(fastForward()));
-    connect(timer, SIGNAL(timeout()), renderWidget, SLOT(timerUpdate()));
+    connect(loadButton,           SIGNAL(pressed()),      renderWidget, SLOT(loadButtonPressed()));
+    connect(saveButton,           SIGNAL(pressed()),      renderWidget, SLOT(saveButtonPressed()));
+    connect(newKeyframeButton,    SIGNAL(pressed()),      this,         SLOT(addKeyframe()));
+    connect(setKeyframeButton,    SIGNAL(pressed()),      this,         SLOT(setKeyframe()));
+    connect(lerpKeyframeButton,   SIGNAL(pressed()),      this,         SLOT(lerpKeyframe()));
+    connect(toggleIKCheck,        SIGNAL(pressed()),      this,         SLOT(toggleIK()));
+    connect(toggleDampeningCheck, SIGNAL(pressed()),      this,         SLOT(toggleDampening()));
+    connect(toggleControlCheck,   SIGNAL(pressed()),      this,         SLOT(toggleControl()));
+    connect(lamdbaSpinBox,        SIGNAL(valueChanged(int)), this,      SLOT(lambdaUpdate(int)));
+    connect(xGainSpinBox,         SIGNAL(valueChanged(int)), this,      SLOT(xGainUpdate(int)));
+    connect(yGainSpinBox,         SIGNAL(valueChanged(int)), this,      SLOT(yGainUpdate(int)));
+    connect(zGainSpinBox,         SIGNAL(valueChanged(int)), this,      SLOT(zGainUpdate(int)));
+    connect(rewindButton,         SIGNAL(pressed()),      this,         SLOT(rewind()));
+    connect(stopButton,           SIGNAL(pressed()),      this,         SLOT(stop()));
+    connect(playButton,           SIGNAL(pressed()),      this,         SLOT(play()));
+    connect(pauseButton,          SIGNAL(pressed()),      this,         SLOT(pause()));
+    connect(fastForwardButton,    SIGNAL(pressed()),      this,         SLOT(fastForward()));
+    connect(timer,                SIGNAL(timeout()),      renderWidget, SLOT(timerUpdate()));
     timer->start(16);
-
 }
 
 // Default slider params
@@ -382,11 +425,6 @@ void MasterWidget::updateText(int frameNo, float playbackSpeed)
   if(renderWidget->zAxis){ axis += "True"      ;}
   else                   { axis += "False "    ;}
 
-  // also add which pose mode we are in
-  axis += "\nMode: ";
-  if(renderWidget->bvh->moveMode == 0){ axis += "Rotate"; }
-  else                                { axis += "IK"; }
-
   // can't convert to 2dp
   string playback = "Playback Speed: " + std::to_string((float)((int)(playbackSpeed * 100.)) / 100.) + "x";
 
@@ -416,8 +454,80 @@ void MasterWidget::lerpKeyframe()
 }
 
 // toggles between Inverse Kinematics and Rotation
-void MasterWidget::toggleIKButton()
+void MasterWidget::toggleIK()
 {
-  if(renderWidget->bvh->moveMode == 0){ renderWidget->bvh->moveMode = 1; std::cout << "1" << '\n'; }
-  else                                { renderWidget->bvh->moveMode = 0; std::cout << "0" << '\n';}
+  if(renderWidget->bvh->moveMode == 0)
+  {
+    renderWidget->bvh->moveMode = 1;
+    toggleIKCheck->setChecked(false);
+  }
+  else
+  {
+    renderWidget->bvh->moveMode = 0;
+    toggleIKCheck->setChecked(true);
+  }
+}
+
+// sets on dampening mode and turns off the other modes
+void MasterWidget::toggleDampening()
+{
+  if(renderWidget->bvh->useDampening == false)
+  {
+    // enable dampening
+    renderWidget->bvh->useDampening = true;
+    toggleDampeningCheck->setChecked(true);
+
+    // disable control
+    renderWidget->bvh->useControl = false;
+    toggleControlCheck->setChecked(false);
+  }
+  else
+  {
+    renderWidget->bvh->useDampening = false;
+    toggleDampeningCheck->setChecked(false);
+  }
+}
+
+// sets on control and turns off the dampening
+void MasterWidget::toggleControl()
+{
+  if(renderWidget->bvh->useControl == false)
+  {
+    // enable control
+    renderWidget->bvh->useControl = true;
+    toggleControlCheck->setChecked(true);
+
+    // disable dampening
+    renderWidget->bvh->useDampening = false;
+    toggleDampeningCheck->setChecked(false);
+  }
+  else
+  {
+    renderWidget->bvh->useControl = false;
+    toggleControlCheck->setChecked(false);
+  }
+}
+
+// update lambda in the bvh class
+void MasterWidget::lambdaUpdate(int i)
+{
+  renderWidget->bvh->lambda = i;
+}
+
+// update xgain in bvh class
+void MasterWidget::xGainUpdate(int i)
+{
+  renderWidget->bvh->xGain = (float)i;
+}
+
+// update ygain in bvh class
+void MasterWidget::yGainUpdate(int i)
+{
+  renderWidget->bvh->yGain = (float)i;
+}
+
+// update zgain in bvh class
+void MasterWidget::zGainUpdate(int i)
+{
+  renderWidget->bvh->zGain = (float)i;
 }
