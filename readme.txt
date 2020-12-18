@@ -1,2 +1,19 @@
-The class was written mainly to load/wrote obj files, having certain assumptions of the obj file.
-You won't be able to directly use it because it is extracted from a project where it depends on other libraries such as QT, log4cpp, boost and glm. However, if you read the code, there are some key functionalities that can be conveniently used for your tasks.
+BVH Animation Software
+======
+
+Animation software that is capable of loading and displaying BVH files.
+Global positions are calculated through forward kinematics.
+
+Limbs can be controlled through local rotations or through inverse kinematics.
+
+Animations can be created through keyframing, where poses are linearly interpolated between.
+
+Allows for control of multiple points, dampening and gain values.
+
+Screenshots
+======
+
+![1](/screenshot1.png)
+![2](/screenshot2.png)
+![3](/screenshot3.png)
+
